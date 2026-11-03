@@ -3,15 +3,15 @@
 #                 "winrt-Windows.Storage.Streams", "winrt-Windows.Foundation",
 #                 "winrt-Windows.Foundation.Collections", "winrt-Windows.Globalization"]
 # ///
-"""BTD6 AFK farm: Flooded Valley, Easy, Deflation. Same menus/overlay/stop keys as farm.py.
-Every placement and upgrade is checked (ghost + pips, from impoppable.py): cash is exact,
+"""BTD6 AFK farm: Flooded Valley, Easy, Deflation. Same menus/overlay/stop keys as core.py.
+Every placement and upgrade is checked (ghost + pips, from infernal_impop.py): cash is exact,
 $5 left over, so nothing may be missed.
 Stop: Numpad 0 (or F8). Pause: Numpad 1.
 """
 import time
 
-import farm as F
-import impoppable as I
+import core as F
+import infernal_impop as I
 
 BUC_KEY, SUB_KEY, WIZARD_KEY = "c", "x", "a"
 BUC = I.Spot("buc", (1110, 520), (1125, 530), (1140, 540))

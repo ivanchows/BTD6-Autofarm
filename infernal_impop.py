@@ -3,7 +3,7 @@
 #                 "winrt-Windows.Storage.Streams", "winrt-Windows.Foundation",
 #                 "winrt-Windows.Foundation.Collections", "winrt-Windows.Globalization"]
 # ///
-"""BTD6 AFK farm: Infernal, Hard, Impoppable. Same menus/overlay/stop keys as farm.py.
+"""BTD6 AFK farm: Infernal, Hard, Impoppable. Same menus/overlay/stop keys as core.py.
 
 Rounds run back to back. "Round X" steps are queued as soon as round X is on screen and
 each purchase goes through the moment the cash is there; the boomer is bought mid round 8.
@@ -13,7 +13,7 @@ Stop: Numpad 0 (or F8).
 import sys
 import time
 
-import farm as F
+import core as F
 
 SKY_KEY, BOOM_KEY, SNIPER_KEY, VILLAGE_KEY, ALCH_KEY, HERO_KEY = "p", "w", "z", "k", "f", "u"
 TARGET_KEY = "\t"   # next targeting priority: First -> Last -> Close -> Strong -> First
@@ -117,9 +117,16 @@ def try_place(key, pos):
     return "blocked"
 
 
+CLOSE_X = (397, 77)     # the open upgrade panel's own X (+PANEL_DX when it's on the right)
+
+
 def deselect():
-    F.click(1000, 1060)
-    F.wait(0.05)
+    """Close the open upgrade panel with its X. Never click the map to deselect: on some maps
+    (Quad, Dark Castle) that spot is a removable obstacle and opens a "Remove for $" prompt."""
+    dx = panel_side(F.grab())
+    if dx is not None:
+        F.click(CLOSE_X[0] + dx, CLOSE_X[1])
+        F.wait(0.05)
     SEL["pos"] = None
 
 

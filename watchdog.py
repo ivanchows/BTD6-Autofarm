@@ -1,4 +1,4 @@
-"""Overnight watchdog for farm.py.
+"""Overnight watchdog for the farms (infernal_easy.py by default).
 
 Keeps the PC and screen awake, and restarts the farm whenever it:
   - exits or crashes (anything but a Numpad 0 / F8 stop),
@@ -6,7 +6,7 @@ Keeps the PC and screen awake, and restarts the farm whenever it:
   - goes 30 minutes without placing towers, winning or losing (stuck on some screen).
 For the last two BTD6 is killed too, and the farm relaunches it through Steam.
 
-Run:  uv run watchdog.py [impoppable.py]        Stop: Numpad 0 (stops the farm and the watchdog).
+Run:  uv run watchdog.py [quad_easy.py]        Stop: Numpad 0 (stops the farm and the watchdog).
 """
 import ctypes
 import json
@@ -21,7 +21,7 @@ FARM_LOG = os.path.join(HERE, "farm.log")
 LOG = os.path.join(HERE, "watchdog.log")
 HEARTBEAT_LIMIT = 120
 PROGRESS_LIMIT = 30 * 60
-SCRIPT = sys.argv[1] if len(sys.argv) > 1 else "farm.py"   # or impoppable.py
+SCRIPT = sys.argv[1] if len(sys.argv) > 1 else "infernal_easy.py"   # or any map script
 MAX_IMPOP_LOSSES = None   # user: stay on Impoppable (set a number to fall back to Deflation)
 IMPOP_WIN_DEADLINE = None      # user: no time-based switch either
 
@@ -108,11 +108,11 @@ def main():
             too_slow = (IMPOP_WIN_DEADLINE is not None and stats.get("wins", 0) == 0
                         and time.time() - WATCH_START > IMPOP_WIN_DEADLINE)
             too_many = MAX_IMPOP_LOSSES is not None and stats.get("losses", 0) >= MAX_IMPOP_LOSSES
-            if SCRIPT == "impoppable.py" and (too_many or too_slow):
+            if SCRIPT == "infernal_impop.py" and (too_many or too_slow):
                 log("no Impoppable win in 90 min" if too_slow else f"{MAX_IMPOP_LOSSES} Impoppable losses"
                     + ": switching to the Deflation farm")
                 kill(proc)
-                globals()["SCRIPT"] = "farm.py"
+                globals()["SCRIPT"] = "infernal_easy.py"
                 time.sleep(3)
                 proc = start_farm(["--go-home"])
                 started = time.time()

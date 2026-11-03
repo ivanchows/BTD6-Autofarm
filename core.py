@@ -622,7 +622,7 @@ def place(hotkey, pos, path):
         for _ in range(tiers):
             key(UPGRADE_KEYS[name])
             wait(0.05)
-    click(1000, 1060)      # deselect on the lava (unplaceable, harmless)
+    click(397, 77)         # the upgrade panel's X (the map can hold removable obstacles)
     wait(0.05)
 
 
@@ -665,7 +665,7 @@ def wait_for(checks, timeout):
 
 
 def on_mode_screen():
-    """Called on the difficulty-mode screen before picking a mode. impoppable.py checks the hero here."""
+    """Called on the difficulty-mode screen before picking a mode. infernal_impop.py checks the hero here."""
 
 
 # Expert maps (read 2026-11-03). The Expert button opens whichever Expert page was last
@@ -688,7 +688,7 @@ def expert_page():
     return None
 
 
-def nav_to(map_name, difficulty_btn, mode_btn):
+def nav_to(map_name, difficulty_btn, mode_btn, final=None):
     """Home -> Play -> Expert -> the map's page (stepped by the dots) -> map -> difficulty -> mode."""
     page, tile = EXPERT_MAPS[map_name]
     click(958, 945)
@@ -705,19 +705,21 @@ def nav_to(map_name, difficulty_btn, mode_btn):
         time.sleep(1.2)
     else:
         return print(f"nav: could not reach Expert page {page}")
-    for pos, screen in ((tile, DIFFICULTY), (difficulty_btn, MODE), (mode_btn, DEFLATION_POPUP)):
+    final = final or DEFLATION_POPUP        # Standard mode goes straight into the game: IN_GAME
+    for pos, screen in ((tile, DIFFICULTY), (difficulty_btn, MODE), (mode_btn, final)):
         for _ in range(2):
             click(*pos)
-            if screen is DEFLATION_POPUP and wait_for(RESTART_CONFIRM, 2):
+            if screen is final and wait_for(RESTART_CONFIRM, 2):
                 click(*RESTART_CONFIRM_BTN)     # "Overwrite save?" (a game was left unfinished): OK
-            if wait_for(screen, 20 if screen is DEFLATION_POPUP else 6):
+            if wait_for(screen, 20 if screen is final else 6):
                 break
         else:
             return print("nav: screen did not come up, retrying from wherever we are")
         time.sleep(0.3)
         if screen is MODE:
             on_mode_screen()
-    click(*OK_BTN)
+    if final is DEFLATION_POPUP:
+        click(*OK_BTN)
 
 
 def nav():
@@ -729,7 +731,8 @@ def nav():
         time.sleep(0.3)     # page slides finish after the dot moves
         if screen is MODE:
             on_mode_screen()
-    click(*OK_BTN)          # dismiss the Deflation instructions straight away
+    if final is DEFLATION_POPUP:
+        click(*OK_BTN)          # dismiss the Deflation instructions straight away
 
 
 def setup():
@@ -744,7 +747,7 @@ def setup():
 
 
 def on_defeat(im):
-    """Called on every defeat screen. impoppable.py logs the loss here."""
+    """Called on every defeat screen. infernal_impop.py logs the loss here."""
 
 
 def go_home():
@@ -770,7 +773,7 @@ def go_home():
 
 
 def ingame():
-    """Called every poll while in a game. Deflation needs nothing; impoppable.py overrides it."""
+    """Called every poll while in a game. Deflation needs nothing; infernal_impop.py overrides it."""
 
 
 def clear_popup(n):

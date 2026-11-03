@@ -3,15 +3,15 @@
 #                 "winrt-Windows.Storage.Streams", "winrt-Windows.Foundation",
 #                 "winrt-Windows.Foundation.Collections", "winrt-Windows.Globalization"]
 # ///
-"""BTD6 AFK farm: Dark Castle, Hard, Impoppable, hero Striker Jones. Built on impoppable.py's
+"""BTD6 AFK farm: Dark Castle, Hard, Impoppable, hero Striker Jones. Built on infernal_impop.py's
 checked placing/upgrading (ghost + pips + panel title). Steps are bought strictly in order
 ("save up"), each the moment the cash is there; rounds run back to back.
 Stop: Numpad 0 (or F8). Pause: Numpad 1.
 """
 import time
 
-import farm as F
-import impoppable as I
+import core as F
+import infernal_impop as I
 
 # Placement points, tested in Sandbox 2026-11-03. A tall tower is drawn 25-40 px above the
 # point it was placed at, so these sit below where each tower appears on screen.
@@ -132,6 +132,7 @@ for _op in PRE + [op for ops in I.STEPS.values() for op in ops]:
         _f[_p] = max(_f[_p], _lvl)
 
 
+DONE_AFTER = 46      # the round the last steps are queued
 NICE = {repr(STRIKER): "Striker", repr(DART): "Dart", repr(SUB): "Sub", repr(SPIKE): "Spike Factory",
         repr(ALCH): "Alchemist", repr(BOMB): "Bomb", repr(VILLAGE): "Village",
         **{repr(sp): f"Mauler {i + 1}" for i, sp in enumerate(MAULER_SPOTS)}}
@@ -140,7 +141,7 @@ NICE = {repr(STRIKER): "Striker", repr(DART): "Dart", repr(SUB): "Sub", repr(SPI
 def next_text():
     """The head of the queue in words, for the overlay: 'Bomb 5-2-0', 'place Village'."""
     if not I.G["queue"]:
-        return "done" if I.G["round"] >= 46 else "-"
+        return "done" if I.G["round"] >= DONE_AFTER else "-"
     op = I.G["queue"][0]
     pos = op[2][1] if op[0] == "place" else op[2][0]
     name = NICE.get(repr(pos), repr(pos))

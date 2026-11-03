@@ -2,12 +2,15 @@
 
 AFK farms for Bloons TD 6. They read the screen and click like a player would.
 
+Each map script is named `<map>_<mode>.py`. The shared code lives in `core.py` (menus, screens, OCR, stats box) and `infernal_impop.py` (checked placing and upgrading, which the other maps reuse).
+
 | Script | Map | Mode |
 |---|---|---|
-| `farm.py` | Infernal | Easy, Deflation |
-| `flooded.py` | Flooded Valley | Easy, Deflation |
-| `impoppable.py` | Infernal | Hard, Impoppable (Benjamin) |
-| `dark.py` | Dark Castle | Hard, Impoppable (Striker Jones) |
+| `infernal_easy.py` | Infernal | Easy, Deflation |
+| `flooded_easy.py` | Flooded Valley | Easy, Deflation |
+| `infernal_impop.py` | Infernal | Hard, Impoppable (Benjamin) |
+| `dark_castle_impop.py` | Dark Castle | Hard, Impoppable (Striker Jones) |
+| `quad_easy.py` | Quad | Easy, Standard (Etienne) |
 
 ## Requirements
 
@@ -40,7 +43,9 @@ uv installs these on the first run (they're declared at the top of each script):
 Start BTD6 on the home screen, then run a farm under the watchdog, which restarts it if it crashes or stalls and relaunches the game through Steam:
 
 ```
-uv run watchdog.py dark.py
+uv run watchdog.py dark_castle_impop.py
 ```
 
 Numpad 1 pauses and resumes, Numpad 0 stops. The farm only acts while BTD6 is the front window.
+
+A stats box sits over the game: runs, uptime, XP, cash, and the next tower step (or "done"). Hold Ctrl to drag it; it remembers where you left it.
