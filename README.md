@@ -11,6 +11,7 @@ Each map script is named `<map>_<mode>.py`. The shared code lives in `core.py` (
 | `infernal_impop.py` | Infernal | Hard, Impoppable (Benjamin) |
 | `dark_castle_impop.py` | Dark Castle | Hard, Impoppable (Striker Jones) |
 | `quad_easy.py` | Quad | Easy, Standard (Etienne) |
+| `muddy_puddles_impop.py` | Muddy Puddles | Hard, Impoppable (Psi) |
 
 ## Requirements
 
@@ -22,7 +23,7 @@ Each map script is named `<map>_<mode>.py`. The shared code lives in `core.py` (
 | Display scaling | Any (the scripts are DPI aware) |
 | Language | Game in English, and the English Windows OCR language pack installed |
 | Python | 3.12 (tested 3.12.15), run through [uv](https://docs.astral.sh/uv/) 0.13 or newer |
-| Hotkeys | BTD6 defaults: towers on their default keys, upgrades `,` `.` `/`, targeting `Tab`, hero `U` |
+| Hotkeys | BTD6 defaults (see [Hotkeys](#hotkeys)) |
 | Unlocks | The maps, heroes and every upgrade each farm buys |
 
 ### Python dependencies
@@ -37,6 +38,37 @@ uv installs these on the first run (they're declared at the top of each script):
 - `winrt-Windows.Foundation`
 - `winrt-Windows.Foundation.Collections`
 - `winrt-Windows.Globalization`
+
+## Hotkeys
+
+The farms press the game's default keys, so keep these bound in BTD6's settings.
+
+| Action | Key |
+|---|---|
+| Start round / fast forward | `Space` |
+| Upgrade top / middle / bottom path | `,` `.` `/` |
+| Next targeting | `Tab` |
+| Hero | `U` |
+| Hero and tower abilities | `1` `2` `3` (in the order they unlock) |
+
+| Tower | Key | Tower | Key |
+|---|---|---|---|
+| Dart Monkey | `Q` | Monkey Buccaneer | `C` |
+| Boomerang Monkey | `W` | Wizard Monkey | `A` |
+| Bomb Shooter | `E` | Alchemist | `F` |
+| Glue Gunner | `Y` | Druid | `G` |
+| Desperado | `;` | Spike Factory | `J` |
+| Sniper Monkey | `Z` | Monkey Village | `K` |
+| Monkey Sub | `X` | Mermonkey | `O` |
+| Skywarden | `P` | | |
+
+The farm's own keys, read even while the game has focus:
+
+| Key | Does |
+|---|---|
+| `Numpad 1` (or `End`) | Pause / resume |
+| `Numpad 0` (or `Insert`, `F8`) | Stop the farm and the watchdog |
+| `Ctrl` held | Drag the stats box |
 
 ## Running
 

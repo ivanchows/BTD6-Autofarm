@@ -162,6 +162,7 @@ def next_text():
     return f"{name} set target"
 
 
+RETRY = 0.5         # seconds between tries of a step that is still waiting
 TRIES = {}          # step label -> failed tries
 MAX_TRIES = {"target": 4, "aim": 4}     # a buy waits for cash, so only these are capped
 
@@ -172,7 +173,7 @@ def run_queue():
     G = I.G
     if not G["queue"]:
         F.STATS["next"] = next_text()
-    if not G["queue"] or time.time() - G["last_try"] < 0.5:
+    if not G["queue"] or time.time() - G["last_try"] < RETRY:
         return
     for _ in range(8):
         if not G["queue"]:

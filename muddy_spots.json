@@ -1,0 +1,93 @@
+{
+  "_note": "Muddy Puddles placement points (where to click with the tower's ghost held), 1920x1080. Tested in Sandbox 2026-11-03: each lands on the user's layout. Middle-puddle Subs are the user's own clicks, in buy order.",
+  "psi": [
+    1021,
+    215
+  ],
+  "sub_right_puddle": [
+    1207,
+    457
+  ],
+  "desperados": [
+    [
+      667,
+      473
+    ],
+    [
+      448,
+      241
+    ],
+    [
+      1139,
+      239
+    ],
+    [
+      476,
+      857
+    ],
+    [
+      1155,
+      859
+    ]
+  ],
+  "mermonkey": [
+    993,
+    450
+  ],
+  "alchemist": [
+    979,
+    696
+  ],
+  "buccaneer": [
+    625,
+    688
+  ],
+  "boomerang": [
+    1326,
+    371
+  ],
+  "village": [
+    788,
+    796
+  ],
+  "glue_gunners": [
+    [
+      1356,
+      623
+    ],
+    [
+      1409,
+      590
+    ]
+  ],
+  "subs_middle_puddle": [
+    [
+      839,
+      637
+    ],
+    [
+      823,
+      701
+    ],
+    [
+      783,
+      593
+    ],
+    [
+      700,
+      612
+    ],
+    [
+      758,
+      655
+    ],
+    [
+      737,
+      724
+    ]
+  ],
+  "sniper": [
+    452,
+    203
+  ]
+}

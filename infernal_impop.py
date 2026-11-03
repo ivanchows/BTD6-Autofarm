@@ -459,9 +459,10 @@ def ingame():
     r = read_round(im)
     if not r or r > 100:
         return
-    # take a new round only after two matching reads, and never jump by more than 3
+    # take a new round only after two matching reads, and never jump by more than 15 (a panel
+    # can cover the counter for several rounds while a step waits for cash)
     if r != G["round"]:
-        if G["pending"] == r and (G["round"] == 0 or 0 < r - G["round"] <= 3):
+        if G["pending"] == r and (G["round"] == 0 or 0 < r - G["round"] <= 15):
             if G["round"] == 0 and not G["fresh"]:
                 # joined mid-game: every place/upgrade is safe to repeat (it checks the
                 # tower first), so re-run all of them; only targeting presses are skipped
