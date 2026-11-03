@@ -400,6 +400,9 @@ def try_op(op):
         result = try_place(key, pos)
         if result == "placed":
             done = True
+        elif result == "nocash" and key == HERO_KEY and has_tower(pos):
+            done = True         # a hero places once: with it standing, its key shows no ghost
+            print("already standing:", label)
         elif result == "blocked":
             FAILS[label] = FAILS.get(label, 0) + 1
             if isinstance(pos, Spot) and FAILS[label] >= len(pos.cands) and key != SNIPER_KEY                     and has_tower(pos):
@@ -419,7 +422,7 @@ def read_round(im):
     c = im.crop((round(1380 * F.W / 1920), 0, round(1570 * F.W / 1920), round(90 * F.H / 1080)))
     for v in (c, c.resize((c.width * 2, c.height * 2))):
         t = F._ocr(v).upper().replace(" ", "").replace("O", "0").replace("I", "1").replace("L", "1")
-        m = F.re.search(r"(\d+)/1\d\d", t)
+        m = F.re.search(r"(\d+)/(?:1\d\d|[4-9]\d)\b", t)     # x/100, or x/40 on Easy Standard
         if m:
             return int(m.group(1))
     return None

@@ -12,6 +12,7 @@ Each map script is named `<map>_<mode>.py`. The shared code lives in `core.py` (
 | `dark_castle_impop.py` | Dark Castle | Hard, Impoppable (Striker Jones) |
 | `quad_easy.py` | Quad | Easy, Standard (Etienne) |
 | `muddy_puddles_impop.py` | Muddy Puddles | Hard, Impoppable (Psi) |
+| `workshop_easy.py` | Workshop | Easy, Standard (Sauda) |
 
 ## Requirements
 
