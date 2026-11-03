@@ -540,7 +540,13 @@ def overlay():
     root.attributes("-topmost", True)
     root.attributes("-alpha", 0.8)
     root.configure(bg="black")
-    root.geometry(f"+{OX + 140}+{OY + 110}")
+    pos_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "overlay_pos.json")
+    try:
+        with open(pos_file, encoding="utf-8") as f:
+            x, y = json.load(f)
+    except Exception:
+        x, y = OX + 140, OY + 110
+    root.geometry(f"+{x}+{y}")
     label = tk.Label(root, font=("Consolas", 12, "bold"), fg="white", bg="black",
                      justify="left", padx=10, pady=6)
     label.pack()
@@ -549,6 +555,38 @@ def overlay():
     style = user32.GetWindowLongW(hwnd, -20)                         # GWL_EXSTYLE
     user32.SetWindowLongW(hwnd, -20, style | 0x80000 | 0x20 | 0x80)  # LAYERED|TRANSPARENT|TOOLWINDOW
     user32.SetWindowDisplayAffinity(hwnd, 0x11)                      # WDA_EXCLUDEFROMCAPTURE
+
+    # Click-through, except while Ctrl is held: then it can be dragged with the mouse.
+    drag = {"grab": None, "on": False}
+
+    def press(e):
+        drag["grab"] = (e.x_root - root.winfo_x(), e.y_root - root.winfo_y())
+
+    def move(e):
+        if drag["grab"]:
+            root.geometry(f"+{e.x_root - drag['grab'][0]}+{e.y_root - drag['grab'][1]}")
+
+    def release(e):
+        drag["grab"] = None
+        try:
+            with open(pos_file, "w", encoding="utf-8") as f:
+                json.dump([root.winfo_x(), root.winfo_y()], f)
+        except OSError:
+            pass
+
+    for w in (root, label):
+        w.bind("<ButtonPress-1>", press)
+        w.bind("<B1-Motion>", move)
+        w.bind("<ButtonRelease-1>", release)
+
+    def watch_ctrl():
+        held = bool(user32.GetAsyncKeyState(0x11) & 0x8000)
+        if held != drag["on"]:
+            drag["on"] = held
+            user32.SetWindowLongW(hwnd, -20, (style | 0x80000 | 0x80) | (0 if held else 0x20))
+            label.config(fg="yellow" if held else "white")
+        root.after(50, watch_ctrl)
+    watch_ctrl()
 
     def tick():
         up = time.time() - STATS["start"]
@@ -562,6 +600,8 @@ def overlay():
                   f"Cash     +{STATS['mm']:,}  ({STATS['mm'] / hours:,.0f}/h)"]
         if _home.get("level"):
             lines.append(f"Level    {_home['level']}")
+        if STATS.get("next"):
+            lines.append(f"Next     {STATS['next']}")
         lines.append(STATS["status"])
         label.config(text="\n".join(lines))
         root.after(1000, tick)

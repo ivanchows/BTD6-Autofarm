@@ -2,3 +2,4 @@ __pycache__/
 *.log
 state.json
 losses/
+overlay_pos.json

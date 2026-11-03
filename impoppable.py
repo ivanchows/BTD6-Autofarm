@@ -380,7 +380,7 @@ def try_op(op):
         else:
             F.key(",./"[p])
             now = None
-            for delay in (0.25, 0.35, 0.5):
+            for delay in (0.12, 0.2, 0.35, 0.5):
                 F.wait(delay)
                 now = tiers()
                 if now and now != cur:

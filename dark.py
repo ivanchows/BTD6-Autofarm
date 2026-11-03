@@ -27,7 +27,7 @@ MAULER_SPOTS = [I.Spot(f"mauler{i + 1}", xy, (xy[0] - 25, xy[1]), (xy[0], xy[1] 
                 for i, xy in enumerate(MAULERS)]
 
 I.TOKENS.update(u=("STRIK", "JONE"), q=("DART",), x=("SUB",), j=("SPIKE", "FACT"),
-                e=("BOMB", "SHOOT"))
+                e=("BOMB", "SHOOT", "BOM", "OOTE", "GOM"))   # OCR reads "Bomg Suooter"
 
 SPIKE_AIM = (1135, 590)     # bottom right of the Spike Factory's range, on the bridge
 
@@ -102,6 +102,18 @@ def selected_is(pos):
 
 
 I.select, I.selected_is = select, selected_is
+
+# OCR mangles the targeting label ("STR0NG", "STRONC"): match on fragments
+FUZZ = {"STRONG": ("STRO", "TRON", "RONG", "TR0N"), "FIRST": ("FIRS", "IRST")}
+_target_label = I.target_label
+
+
+def target_label():
+    t = _target_label().replace("0", "O")
+    return t + "".join(" " + m for m, frags in FUZZ.items() if any(f in t for f in frags))
+
+
+I.target_label = target_label
 I.STEPS = {
     0: (I.P("j", SPIKE, (0, 0, 2)) + SPIKE_TARGET + I.U(SPIKE, top=2) + I.U(SPIKE, bot=2)
         + I.P("f", ALCH, (3, 0, 0)) + I.P("e", BOMB, (4, 2, 0))),
@@ -120,23 +132,75 @@ for _op in PRE + [op for ops in I.STEPS.values() for op in ops]:
         _f[_p] = max(_f[_p], _lvl)
 
 
+NICE = {repr(STRIKER): "Striker", repr(DART): "Dart", repr(SUB): "Sub", repr(SPIKE): "Spike Factory",
+        repr(ALCH): "Alchemist", repr(BOMB): "Bomb", repr(VILLAGE): "Village",
+        **{repr(sp): f"Mauler {i + 1}" for i, sp in enumerate(MAULER_SPOTS)}}
+
+
+def next_text():
+    """The head of the queue in words, for the overlay: 'Bomb 5-2-0', 'place Village'."""
+    if not I.G["queue"]:
+        return "done" if I.G["round"] >= 46 else "-"
+    op = I.G["queue"][0]
+    pos = op[2][1] if op[0] == "place" else op[2][0]
+    name = NICE.get(repr(pos), repr(pos))
+    if op[0] == "place":
+        return f"place {name}"
+    if op[0] == "tier":
+        t = list(I.FINAL.get(repr(pos), [0, 0, 0]))
+        # tiers this step reaches: the levels asked for so far, taken from the queue order
+        want = [0, 0, 0]
+        for o in PRE + [x for ops in I.STEPS.values() for x in ops]:
+            if o[0] == "tier" and repr(o[2][0]) == repr(pos):
+                want[o[2][1]] = max(want[o[2][1]], o[2][2])
+                if o is op or o[3] == op[3]:
+                    break
+        return f"{name} {'-'.join(map(str, want))}"
+    if op[0] == "target":
+        return f"{name} -> {op[2][1].title()}"
+    return f"{name} set target"
+
+
+TRIES = {}          # step label -> failed tries
+MAX_TRIES = {"target": 4, "aim": 4}     # a buy waits for cash, so only these are capped
+
+
 def run_queue():
-    """Strictly in order: the head step waits for its cash, nothing jumps ahead of it."""
+    """Strictly in order: the head step waits for its cash, nothing jumps ahead of it.
+    Steps that go through run back to back; a failed one waits half a second."""
     G = I.G
+    if not G["queue"]:
+        F.STATS["next"] = next_text()
     if not G["queue"] or time.time() - G["last_try"] < 0.5:
         return
+    for _ in range(8):
+        if not G["queue"]:
+            break
+        op = G["queue"][0]
+        key = repr(op[2][1] if op[0] == "place" else op[2][0])
+        if WRONG.get(key, 0) >= GIVE_UP:
+            # drop every step left for this tower, or the next one loops the same clicks
+            dropped = [o for o in G["queue"] if repr(o[2][1] if o[0] == "place" else o[2][0]) == key]
+            print(f"!! gave up on {key}: its panel never opened in {GIVE_UP} clicks; "
+                  f"skipping {len(dropped)} steps: " + "; ".join(o[3] for o in dropped))
+            WRONG[key] = 0
+            G["queue"] = [o for o in G["queue"] if o not in dropped]
+            I.deselect()
+            continue
+        if aim_spikes() if op[0] == "aim" else I.try_op(op):
+            G["queue"].pop(0)
+            TRIES.pop(op[3], None)
+            print(op[3])
+            continue
+        TRIES[op[3]] = TRIES.get(op[3], 0) + 1
+        if TRIES[op[3]] >= MAX_TRIES.get(op[0], 10 ** 9):
+            print(f"!! gave up on '{op[3]}' after {TRIES[op[3]]} tries, moving on")
+            G["queue"].pop(0)
+            TRIES.pop(op[3], None)
+            continue
+        break
     G["last_try"] = time.time()
-    op = G["queue"][0]
-    key = repr(op[2][1] if op[0] == "place" else op[2][0])
-    if WRONG.get(key, 0) >= GIVE_UP:
-        print(f"!! gave up on '{op[3]}': its panel never opened in {GIVE_UP} clicks")
-        WRONG[key] = 0
-        G["queue"].pop(0)
-        I.deselect()
-        return
-    if (aim_spikes() if op[0] == "aim" else I.try_op(op)):
-        G["queue"].pop(0)
-        print(op[3])
+    F.STATS["next"] = next_text()
     if not G["queue"] and I.SEL["pos"] is not None:
         I.deselect()
 
@@ -157,6 +221,7 @@ def setup():
     I.G.update(round=0, done={0}, during=set(), pending=None, fresh=True, queue=list(PRE))
     I.FAILS.clear()
     WRONG.clear()
+    TRIES.clear()
     I.SEL["pos"] = None
     for spot in MAULER_SPOTS:
         spot.i = 0
