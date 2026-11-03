@@ -1,0 +1,11 @@
+{
+  "_note": "Hero list grid, 3 columns. Tile centres at x 103/254/405, y 222/414/606/798/990 (rows 1-5); row 6 only after scrolling the list (y ~905 once scrolled to the bottom). The title shows the hero name, the line under it the equipped skin. Read 2026-11-03.",
+  "grid": [
+    ["Quincy (Archer)", "Gwendolin (Pyromaniac)", "Striker Jones (Biker Bones skin)"],
+    ["Obyn Greenfoot (Mountain Guardian skin)", "Dan D'Monke (Courtly Monkey)", "Benjamin (Benjammin DJ skin)"],
+    ["Pat Fusty (Giant Monkey)", "Captain Churchill (Tank)", "Ezili (Smudge Catt skin)"],
+    ["Silas (Ice Shaper)", "Etienne (ETn skin)", "Sauda (Jiangshi Sauda skin)"],
+    ["Rosalia (Tinkerer)", "Adora (Voidora skin)", "Admiral Brickell (Naval Commander)"],
+    ["Psi (Psimbals skin)", "Geraldo (Mystic Shopkeeper)", "Corvus (Spirit Walker)"]
+  ]
+}

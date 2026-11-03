@@ -1,0 +1,141 @@
+"""Overnight watchdog for farm.py.
+
+Keeps the PC and screen awake, and restarts the farm whenever it:
+  - exits or crashes (anything but a Numpad 0 / F8 stop),
+  - stops writing its heartbeat for 2 minutes (frozen),
+  - goes 30 minutes without placing towers, winning or losing (stuck on some screen).
+For the last two BTD6 is killed too, and the farm relaunches it through Steam.
+
+Run:  uv run watchdog.py [impoppable.py]        Stop: Numpad 0 (stops the farm and the watchdog).
+"""
+import ctypes
+import json
+import os
+import subprocess
+import sys
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+STATE_FILE = os.path.join(HERE, "state.json")
+FARM_LOG = os.path.join(HERE, "farm.log")
+LOG = os.path.join(HERE, "watchdog.log")
+HEARTBEAT_LIMIT = 120
+PROGRESS_LIMIT = 30 * 60
+SCRIPT = sys.argv[1] if len(sys.argv) > 1 else "farm.py"   # or impoppable.py
+MAX_IMPOP_LOSSES = None   # user: stay on Impoppable (set a number to fall back to Deflation)
+IMPOP_WIN_DEADLINE = None      # user: no time-based switch either
+
+user32 = ctypes.windll.user32
+ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x1 | 0x2)  # CONTINUOUS|SYSTEM|DISPLAY
+
+
+def log(msg):
+    line = time.strftime("%Y-%m-%d %H:%M:%S ") + msg
+    print(line, flush=True)
+    with open(LOG, "a", encoding="utf-8") as f:
+        f.write(line + "\n")
+
+
+def state():
+    try:
+        with open(STATE_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None             # mid-write or locked: unknown, not "frozen"
+
+
+def stop_pressed():
+    # 0x8001: held now, or pressed at any point since the last poll
+    return any(user32.GetAsyncKeyState(k) & 0x8001 for k in (0x60, 0x2D, 0x77))
+
+
+def start_farm(extra=()):
+    st = state() or {}
+    args = ["uv", "run", "-q", os.path.join(HERE, SCRIPT), *extra]
+    fresh = time.time() - st.get("heartbeat", 0) < HEARTBEAT_LIMIT
+    if fresh and st.get("running") and user32.FindWindowW(None, "BloonsTD6"):
+        args.append("--running")        # towers are already down in this game
+    log("starting farm " + " ".join(args[3:]))
+    out = open(FARM_LOG, "a", encoding="utf-8")
+    env = dict(os.environ, PYTHONUNBUFFERED="1")
+    return subprocess.Popen(args, cwd=HERE, stdout=out, stderr=subprocess.STDOUT, env=env,
+                            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+
+
+def kill(proc):
+    subprocess.run(["taskkill", "/f", "/t", "/pid", str(proc.pid)], capture_output=True)
+
+
+WATCH_START = time.time()
+
+
+def main():
+    log("watchdog up")
+    try:                                # a stop from the last session must not end this one
+        st = state() or {}
+        st.setdefault("stats", {}).pop("stopped", None)
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(st, f)
+    except OSError:
+        pass
+    stop_pressed()                      # clear any old "pressed since" bit
+    proc = start_farm()
+    started = time.time()
+    while True:
+        hit = False
+        for _ in range(10):             # check the stop key every 0.2 s (reading clears the
+            time.sleep(0.2)             # "pressed since" bit, so keep the result)
+            if stop_pressed():
+                hit = True
+                break
+        if hit:
+            kill(proc)
+            log("stopped by hotkey")
+            return
+        code = proc.poll()
+        if code is not None:
+            if (state() or {}).get("stats", {}).get("stopped"):
+                log("farm stopped by hotkey, watchdog exiting")
+                return
+            log(f"farm exited ({code}), restarting")
+        else:
+            if time.time() - started < 90:      # give it time to boot / relaunch the game
+                continue
+            st = state()
+            if st is None:
+                continue
+            stats = st.get("stats", {})
+            too_slow = (IMPOP_WIN_DEADLINE is not None and stats.get("wins", 0) == 0
+                        and time.time() - WATCH_START > IMPOP_WIN_DEADLINE)
+            too_many = MAX_IMPOP_LOSSES is not None and stats.get("losses", 0) >= MAX_IMPOP_LOSSES
+            if SCRIPT == "impoppable.py" and (too_many or too_slow):
+                log("no Impoppable win in 90 min" if too_slow else f"{MAX_IMPOP_LOSSES} Impoppable losses"
+                    + ": switching to the Deflation farm")
+                kill(proc)
+                globals()["SCRIPT"] = "farm.py"
+                time.sleep(3)
+                proc = start_farm(["--go-home"])
+                started = time.time()
+                continue
+            beat = time.time() - st.get("heartbeat", 0)
+            progress = time.time() - max(st.get("stats", {}).get("progress", 0), started)
+            if beat > HEARTBEAT_LIMIT or progress > PROGRESS_LIMIT:
+                why = (f"no heartbeat for {beat:.0f}s" if beat > HEARTBEAT_LIMIT
+                       else f"no progress for {progress / 60:.0f} min")
+                log(why + ", restarting farm and BTD6")   # fresh game, no half-placed towers
+                kill(proc)
+                subprocess.run(["taskkill", "/f", "/im", "BloonsTD6.exe"], capture_output=True)
+                time.sleep(5)
+            else:
+                continue
+        time.sleep(5)
+        proc = start_farm()
+        started = time.time()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        log(f"watchdog crashed: {e!r}")
+        raise
