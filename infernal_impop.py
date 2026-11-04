@@ -128,6 +128,7 @@ def deselect():
         F.click(CLOSE_X[0] + dx, CLOSE_X[1])
         F.wait(0.05)
     SEL["pos"] = None
+    SEL["ok"] = None
 
 
 def select(pos):
@@ -136,12 +137,14 @@ def select(pos):
     """Open pos's upgrade panel. Stays open across back-to-back upgrades of the same tower;
     a different tower gets a click-off first, so an open panel never covers the next click."""
     if SEL["pos"] == pos:
-        return
+        return False
     if SEL["pos"] is not None:
         deselect()
     F.click(*pos)
     F.wait(0.1)
     SEL["pos"] = pos
+    SEL["ok"] = None
+    return True
 
 
 # Atomic ops, run strictly in order. A purchase only counts once the cash drops; until then
@@ -371,12 +374,16 @@ def try_op(op):
             deselect()
     elif kind == "tier":
         pos, p, level = args
-        select(pos)
-        F.wait(0.1)
+        if select(pos) is not False:
+            F.wait(0.1)
         cur = tiers()
-        if cur is not None and not selected_is(pos):
-            cur = None                  # some other tower's panel: never press keys on it
-            print(f"wrong tower selected for {label}, retrying")
+        # the open panel was already confirmed as this tower: skip the slow title OCR
+        if cur is not None and SEL.get("ok") != xy(pos):
+            if selected_is(pos):
+                SEL["ok"] = xy(pos)
+            else:
+                cur = None              # some other tower's panel: never press keys on it
+                print(f"wrong tower selected for {label}, retrying")
         if cur is None:                 # panel didn't open: click the tower again next try
             deselect()
         elif any(cur[q] > FINAL.get(repr(pos), [5, 5, 5])[q] for q in range(3)):
@@ -387,7 +394,7 @@ def try_op(op):
         else:
             F.key(",./"[p])
             now = None
-            for delay in (0.12, 0.2, 0.35, 0.5):
+            for delay in (0.06, 0.08, 0.1, 0.15, 0.25, 0.4):
                 F.wait(delay)
                 now = tiers()
                 if now and now != cur:

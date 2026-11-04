@@ -13,6 +13,7 @@ Each map script is named `<map>_<mode>.py`. The shared code lives in `core.py` (
 | `quad_easy.py` | Quad | Easy, Standard (Etienne) |
 | `muddy_puddles_impop.py` | Muddy Puddles | Hard, Impoppable (Psi) |
 | `workshop_easy.py` | Workshop | Easy, Standard (Sauda) |
+| `glacial_trail_impop.py` | Glacial Trail | Hard, Impoppable (Silas) |
 
 ## Requirements
 
@@ -50,18 +51,24 @@ The farms press the game's default keys, so keep these bound in BTD6's settings.
 | Upgrade top / middle / bottom path | `,` `.` `/` |
 | Next targeting | `Tab` |
 | Hero | `U` |
-| Hero and tower abilities | `1` `2` `3` (in the order they unlock) |
+| Hero and tower abilities | `1` to `0`, `-`, `=` (in the order they unlock) |
+| Sell | `Backspace` |
 
 | Tower | Key | Tower | Key |
 |---|---|---|---|
-| Dart Monkey | `Q` | Monkey Buccaneer | `C` |
+| Dart Monkey | `Q` | Dartling Gunner | `M` |
 | Boomerang Monkey | `W` | Wizard Monkey | `A` |
-| Bomb Shooter | `E` | Alchemist | `F` |
+| Bomb Shooter | `E` | Super Monkey | `S` |
+| Tack Shooter | `R` | Ninja Monkey | `D` |
+| Ice Monkey | `T` | Alchemist | `F` |
 | Glue Gunner | `Y` | Druid | `G` |
-| Desperado | `;` | Spike Factory | `J` |
-| Sniper Monkey | `Z` | Monkey Village | `K` |
-| Monkey Sub | `X` | Mermonkey | `O` |
-| Skywarden | `P` | | |
+| Desperado | `;` | Mermonkey | `O` |
+| Sniper Monkey | `Z` | Skywarden | `P` |
+| Monkey Sub | `X` | Banana Farm | `H` |
+| Monkey Buccaneer | `C` | Spike Factory | `J` |
+| Monkey Ace | `V` | Monkey Village | `K` |
+| Heli Pilot | `B` | Engineer Monkey | `L` |
+| Mortar Monkey | `N` | Beast Handler | `I` |
 
 The farm's own keys, read even while the game has focus:
 

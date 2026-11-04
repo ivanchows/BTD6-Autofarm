@@ -80,7 +80,7 @@ def click_point(pos):
 
 
 def select(pos):
-    _select(click_point(pos) if isinstance(pos, (tuple, I.Spot)) and repr(pos) in I.NAME else pos)
+    return _select(click_point(pos) if isinstance(pos, (tuple, I.Spot)) and repr(pos) in I.NAME else pos)
 
 
 def selected_is(pos):

@@ -53,6 +53,7 @@ def upgrade(spot, path):
 
 
 def tower(key, spot, path):
+    F.STATS["next"] = f"{spot.name} {'-'.join(map(str, path))}"
     I.NAME[repr(spot)] = I.TOKENS[key]
     if place(key, spot):
         upgrade(spot, path)
@@ -66,6 +67,8 @@ def setup():
     I.start_round()
     tower(SUB_KEY, SUB, (4, 2, 0))
     tower(WIZARD_KEY, WIZARD, (2, 0, 4))
+    I.deselect()
+    F.STATS["next"] = "done"    # nothing left to do until the game ends: no clicks, no mouse moves
     print("running, cash", I.read_cash())
 
 

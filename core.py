@@ -268,6 +268,8 @@ def click(x, y):
 def move(x, y):
     # A real mouse-move event: the game ignores SetCursorPos for the placement ghost.
     # Absolute coordinates are 0..65535 across the primary monitor.
+    if not in_front():          # never move the user's mouse while they're in another window
+        return
     sx, sy = scr(x, y)
     sw, sh = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
     i = INPUT(type=0)
@@ -789,8 +791,8 @@ def farm():
     if running:
         STATS["run_start"] = time.time()
     load_state()
-    time.sleep(1)                       # let the overlay come up, then give the game focus
-    focus()
+    time.sleep(1)                       # let the overlay come up (the game is never pulled forward:
+                                        # the farm waits until the user puts BTD6 in front)
     if "--go-home" in sys.argv:
         go_home()
     games = 0
@@ -802,7 +804,6 @@ def farm():
         if not game_ok():
             STATS["status"] = "relaunched after crash"
             running = False
-            focus()
         im = grab()
         known = True
         if matches(im, DEFLATION_POPUP):
@@ -847,16 +848,12 @@ def farm():
         elif matches(im, VICTORY_MENU):
             click(*HOME_BTN)
             wait(1)
-        elif matches(im, MODE):
-            print("mode screen -> picking the mode")   # left here by a restart
-            on_mode_screen()
-            click(*NAV[-1][0])
-            wait_for(DEFLATION_POPUP, 20)
-        elif matches(im, DIFFICULTY):
-            print("difficulty screen -> picking it")   # nav got cut short
-            i = [screen is DIFFICULTY for _, screen in NAV].index(True)
-            click(*NAV[i + 1][0])
-            wait_for(MODE, 6)
+        elif matches(im, MODE) or matches(im, DIFFICULTY):
+            # Whatever map this screen belongs to is unknown (it was a different map's screen
+            # once, and the farm played Glacial Trail): back out to the home screen and nav from there.
+            print("mode/difficulty screen -> back to home, map unknown")
+            click(78, 55)
+            wait(2)
         elif matches(im, TITLE):
             print("start screen -> START")
             click(*START_BTN)

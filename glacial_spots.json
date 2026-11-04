@@ -1,0 +1,39 @@
+{
+  "_note": "Glacial Trail placement points, 1920x1080. Silas, Spike and the two cluster Ice are the user's own placing clicks (placed in this order: Silas, Spike, top Ice, bottom Ice); the rest placed in Sandbox 2026-11-03.",
+  "dart": [
+    236,
+    545
+  ],
+  "ninja": [
+    315,
+    536
+  ],
+  "silas": [
+    1363,
+    663
+  ],
+  "ice1_top": [
+    1155,
+    571
+  ],
+  "spike": [
+    1442,
+    755
+  ],
+  "mortar": [
+    1554,
+    985
+  ],
+  "mortar_target": [
+    1232,
+    675
+  ],
+  "ice2_bottom": [
+    1361,
+    735
+  ],
+  "ice3_top": [
+    1434,
+    674
+  ]
+}
