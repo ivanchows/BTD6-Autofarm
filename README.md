@@ -14,6 +14,7 @@ Each map script is named `<map>_<mode>.py`. The shared code lives in `core.py` (
 | `muddy_puddles_impop.py` | Muddy Puddles | Hard, Impoppable (Psi) |
 | `workshop_easy.py` | Workshop | Easy, Standard (Sauda) |
 | `glacial_trail_impop.py` | Glacial Trail | Hard, Impoppable (Silas) |
+| `dark_dungeons_easy.py` | Dark Dungeons | Easy, Standard (Obyn) |
 
 ## Requirements
 
