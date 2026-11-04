@@ -690,8 +690,14 @@ def expert_page():
     return None
 
 
+MAP_NAME = "map"     # the farm's map, for the stats box (nav_to sets it)
+
+
 def nav_to(map_name, difficulty_btn, mode_btn, final=None):
     """Home -> Play -> Expert -> the map's page (stepped by the dots) -> map -> difficulty -> mode."""
+    global MAP_NAME
+    MAP_NAME = map_name
+    STATS["status"] = f"loading {map_name}"
     page, tile = EXPERT_MAPS[map_name]
     click(958, 945)
     if not wait_for(MAP_SELECT, 6):
@@ -812,12 +818,14 @@ def farm():
             running = False
             STATS["status"] = "placing towers"
         elif matches(im, VICTORY_STATS):
-            games += 1
-            print(f"win #{games}")
-            STATS["wins"] += 1
+            if not STATS.get("won_this_game"):      # the screen lingers (and Next can be
+                STATS["won_this_game"] = True       # ignored while tabbed out): count it once
+                games += 1
+                print(f"win #{games}")
+                STATS["wins"] += 1
+                if STATS["run_start"]:
+                    STATS["last_run"] = time.time() - STATS["run_start"]
             STATS["progress"] = time.time()
-            if STATS["run_start"]:
-                STATS["last_run"] = time.time() - STATS["run_start"]
             STATS["status"] = "won, heading home"
             click(*NEXT_BTN)
             wait(0.8)
@@ -878,17 +886,22 @@ def farm():
             print("home -> back into the map")
             STATS["status"] = "reading stats"
             read_home(im)
-            STATS["status"] = "loading Infernal"
+            STATS["status"] = f"loading {MAP_NAME}"
             nav()
         elif matches(im, IN_GAME):
             if not running:
                 STATS["status"] = "placing towers"
                 STATS["lost_this_game"] = False
+                STATS["won_this_game"] = False
                 setup()
                 running = True
                 STATS["run_start"] = time.time()
                 STATS["progress"] = time.time()
-            STATS["status"] = "farming"
+            if user32.GetForegroundWindow() == HWND:
+                STATS["status"] = "tabbed in"
+            else:
+                STATS["status"] = "tabbed out"
+                STATS["progress"] = time.time()     # waiting on purpose: keep the watchdog quiet
             ingame()
         else:
             known = False

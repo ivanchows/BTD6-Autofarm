@@ -14,9 +14,10 @@ import core as F
 import infernal_impop as I
 
 BUC_KEY, SUB_KEY, WIZARD_KEY = "c", "x", "a"
-BUC = I.Spot("buc", (1110, 520), (1125, 530), (1140, 540))
-SUB = I.Spot("sub", (1000, 755), (1010, 765), (1020, 775))
-WIZARD = I.Spot("wizard", (745, 415), (735, 425), (725, 435))
+# first spots are the ones that place (the old firsts were refused every game)
+BUC = I.Spot("buc", (1125, 530), (1140, 540), (1110, 520))
+SUB = I.Spot("sub", (1010, 765), (1020, 775), (1000, 755))
+WIZARD = I.Spot("wizard", (735, 425), (725, 435), (745, 415))
 FLOODED_TILE = (1385, 580)     # first Expert page, bottom right
 I.TOKENS.update(c=("BUCC", "CCAN"), x=("SUB",), a=("WIZ", "ZARD"))
 
