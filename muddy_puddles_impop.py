@@ -34,8 +34,7 @@ D.FUZZ["LAST"] = ("LAS", "AST")
 
 D.PRE = I.P("c", BUCC)                                           # before the first round, on First
 I.STEPS = {
-    0: [],
-    7: I.P("z", SNIPER),
+    0: I.P("z", SNIPER),                                         # Sniper the moment the cash is there
     8: I.T(SNIPER, "STRONG"),
     9: I.P("w", BOOM) + I.T(BOOM, "LAST") + [("hand", None, (BOOM,), "boomerang -> switch hand")],
     10: I.P("x", SUB1),
@@ -44,7 +43,7 @@ I.STEPS = {
     15: I.U(SUB2, top=1),                                        # Advanced Intel
     18: I.U(SUB2, bot=1),                                        # Twin Guns
     22: I.U(SUB2, bot=1) + I.U(SNIPER, top=1, mid=1),            # Airburst Darts; FMJ + Night Vision
-    27: I.P("u", PSI) + I.T(PSI, "STRONG"),
+    27: I.P("u", PSI) + [("tabs", None, (PSI, 3), "psi -> strong (3 tabs)")],
     30: I.U(SUB2, bot=1),                                        # Triple Guns
     35: I.U(SUB2, bot=1) + I.U(DES_MID, mid=1) + I.P("f", ALCH, (2, 0, 0)),   # APD, Eagle Eye, Acid
     37: I.U(ALCH, top=1) + I.U(ALCH, bot=1),                     # Berserker Brew, Faster Throwing
@@ -67,6 +66,7 @@ I.STEPS = {
 # so the cash is spent the moment it's there (the Boomerang has to be down before round 9).
 I.STEPS = {max(0, k - 1) if k else 0: v for k, v in I.STEPS.items()}
 D.RETRY = 0.25
+I.NAME.pop(repr(PSI), None)      # his purple skin title fails the name check; he stands alone
 # The Sniper's right-side panel title reads as nothing to the OCR; it stands alone, so any open
 # panel after clicking it is its own (tiers are still checked off the pips).
 I.NAME.pop(repr(SNIPER), None)
@@ -91,6 +91,8 @@ for _op in D.PRE + [op for ops in I.STEPS.values() for op in ops]:
 # a neighbour. Each Sub's expected tiers are tracked; a panel showing other tiers is the wrong Sub.
 CLUSTER = {repr(p) for p in [SUB2, SUB3, *LATE]}
 EXPECT = {}
+TABBED = set()       # towers whose blind Tab presses are done this game
+D.MAX_TRIES["tabs"] = 4
 _try_op, _selected_is = I.try_op, I.selected_is
 
 
@@ -102,8 +104,26 @@ def selected_is(pos):
 
 
 def try_op(op):
+    if op[0] == "tabs":
+        # Psi's targeting label is white on yellow and the OCR can't read it, so it never
+        # matched "Strong" (30 s of Tab presses). From First, Strong is exactly 3 Tabs away.
+        pos, n = op[2]
+        if repr(pos) in TABBED:     # done already (a rejoined game): 3 more would leave Strong
+            return True
+        I.select(pos)
+        F.wait(0.3)
+        if I.panel_side(F.grab()) is None or not I.selected_is(pos):
+            I.deselect()
+            return False
+        for _ in range(n):
+            F.key(I.TARGET_KEY)
+            F.wait(0.15)
+        TABBED.add(repr(pos))
+        return True
     if op[0] == "hand":
         pos = op[2][0]
+        if "hand" in TABBED:        # a toggle: never press it twice in one game
+            return True
         I.select(pos)
         F.wait(0.3)
         dx = I.panel_side(F.grab())
@@ -112,6 +132,7 @@ def try_op(op):
             return False
         F.click(HAND_BTN[0] + dx, HAND_BTN[1])
         F.wait(0.2)
+        TABBED.add("hand")
         return True
     done = _try_op(op)
     if done and op[0] == "place":
@@ -134,7 +155,9 @@ def run_queue():
     r = I.G["round"]
     ROUND_AT.setdefault(r, time.time())
     for rnd, delay, key in ABILITIES:
-        if r == rnd and (rnd, key) not in FIRED and time.time() - ROUND_AT[r] >= delay:
+        # the counter can skip a round (a panel covering it): a round seen late fires at once
+        late = r > rnd
+        if rnd <= r <= rnd + 2 and (rnd, key) not in FIRED and (late or time.time() - ROUND_AT[r] >= delay):
             FIRED.add((rnd, key))
             I.drop_ghost()
             F.key(key)
@@ -146,10 +169,13 @@ _setup = D.setup
 
 
 def setup():
+    TABBED.clear()
     FIRED.clear()
     ROUND_AT.clear()
     EXPECT.clear()
     _setup()
+    if I.G["round"] > 7:        # rejoined mid-game: Psi was set to Strong when he went down
+        TABBED.update({repr(PSI), "hand"})
 
 
 I.run_queue = run_queue

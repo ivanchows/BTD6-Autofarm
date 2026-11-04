@@ -655,6 +655,33 @@ def open_boxes(im):
         wait(1.5)
 
 
+FEATURED = [(1435, 410), (1560, 410), (1435, 520), (1560, 520)]   # the 4 featured instas
+
+
+def pick_banana_farm(im):
+    """User: on a full candy box, if a Banana Farm is among the featured instas, click it
+    before opening. Its icon is the only one with lots of banana yellow plus palm green
+    (the others measured <=1% yellow). Every featured row is saved to featured/ so the
+    test can be checked against what was really there."""
+    folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "featured")
+    os.makedirs(folder, exist_ok=True)
+    stamp = time.strftime("%Y%m%d_%H%M%S")
+    im.crop((1355, 320, 1640, 640)).save(os.path.join(folder, f"{stamp}.png"))
+    for x, y in FEATURED:
+        sx, sy = scr(x, y)
+        sx, sy = sx - OX, sy - OY
+        px = list(im.convert("RGB").crop((sx - 38, sy - 38, sx + 38, sy + 38)).getdata())
+        yellow = sum(r > 200 and g > 170 and b < 90 for r, g, b in px) / len(px)
+        green = sum(g > 150 and r < 120 and b < 100 for r, g, b in px) / len(px)
+        if yellow > 0.06 and green > 0.03:
+            print(f"featured insta at {(x, y)} looks like a Banana Farm: picking it")
+            click(x, y)
+            wait(1.5)
+            grab().save(os.path.join(folder, f"{stamp}_picked.png"))
+            return True
+    return False
+
+
 def wait_for(checks, timeout):
     """Poll until the screen matches; False on timeout."""
     end = time.time() + timeout
@@ -876,6 +903,7 @@ def farm():
         elif matches(im, EVENT):
             px = im.getpixel((round(COLLECT_BTN[0] * W / 1920), round(COLLECT_BTN[1] * H / 1080)))
             if px[1] > 180 and px[0] < 150 and px[2] < 100:     # green Collect button
+                pick_banana_farm(im)
                 print("collecting candy box")
                 click(*COLLECT_BTN)
                 wait(3)

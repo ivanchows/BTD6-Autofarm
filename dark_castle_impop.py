@@ -138,18 +138,14 @@ NICE = {repr(STRIKER): "Striker", repr(DART): "Dart", repr(SUB): "Sub", repr(SPI
         **{repr(sp): f"Mauler {i + 1}" for i, sp in enumerate(MAULER_SPOTS)}}
 
 
-def next_text():
-    """The head of the queue in words, for the overlay: 'Bomb 5-2-0', 'place Village'."""
-    if not I.G["queue"]:
-        return "done" if I.G["round"] >= DONE_AFTER else "-"
-    op = I.G["queue"][0]
+def describe(op):
+    """A step in words, for the overlay: 'Bomb 5-2-0', 'place Village'."""
     pos = op[2][1] if op[0] == "place" else op[2][0]
     name = NICE.get(repr(pos), repr(pos))
     if op[0] == "place":
         return f"place {name}"
     if op[0] == "tier":
-        t = list(I.FINAL.get(repr(pos), [0, 0, 0]))
-        # tiers this step reaches: the levels asked for so far, taken from the queue order
+        # tiers this step reaches: the levels asked for so far, taken from the build order
         want = [0, 0, 0]
         for o in PRE + [x for ops in I.STEPS.values() for x in ops]:
             if o[0] == "tier" and repr(o[2][0]) == repr(pos):
@@ -160,6 +156,17 @@ def next_text():
     if op[0] == "target":
         return f"{name} -> {op[2][1].title()}"
     return f"{name} set target"
+
+
+def next_text():
+    """What the farm buys next: the head of the queue, or the next round's first step
+    ('r75: Buccaneer 5-2-0', the round it gets bought from) while it waits for that round; 'done' once nothing is left."""
+    if I.G["queue"]:
+        return describe(I.G["queue"][0])
+    later = sorted(k for k in I.STEPS if k not in I.G["done"] and I.STEPS[k])
+    if not later:
+        return "done"
+    return f"r{later[0]}: {describe(I.STEPS[later[0]][0])}"
 
 
 RETRY = 0.5         # seconds between tries of a step that is still waiting
@@ -211,14 +218,28 @@ def setup():
     I.drop_ghost()
     I.deselect()                # an open panel slides the round counter out of the read box
     F.wait(0.4)
-    r = I.read_round(F.grab()) or I.read_round(F.grab())
+    r = None
+    for _ in range(8):          # a passing bloon can spoil one read: try a few before
+        r = I.read_round(F.grab())  # deciding this is a brand-new game
+        if r:
+            break
+        F.wait(0.3)
     if r and r > 7:            # Impoppable starts on round 6
-        print(f"dark castle: rejoined on round {r}, re-checking upgrades only")
-        I.G.update(round=r, done={0}, during=set(), pending=None, fresh=True,
-                   queue=[op for op in PRE if op[0] != "place"] + list(I.STEPS[0]))
-        # a place on a spot that's taken is refused 3x and counted as standing
         I.FAILS.clear()
         I.SEL["pos"] = None
+        if set(I.STEPS) - {0}:
+            # A round-by-round build: carry on from this round. Everything scheduled for an
+            # earlier round is taken as bought (re-checking ~90 steps took whole rounds and
+            # lost a game); the next round's steps go in as usual.
+            print(f"dark castle: rejoined on round {r}, carrying on from here")
+            I.G.update(round=r, done={k for k in I.STEPS if k < r} | {0}, during=set(),
+                       pending=None, fresh=True, queue=[])
+        else:
+            # The whole build is one list bought as fast as cash allows: re-check it (a
+            # place on a spot that's taken is refused 3x and counted as standing).
+            print(f"dark castle: rejoined on round {r}, re-checking the build")
+            I.G.update(round=r, done={0}, during=set(), pending=None, fresh=True,
+                       queue=[op for op in PRE if op[0] != "place"] + list(I.STEPS[0]))
         return
     I.G.update(round=0, done={0}, during=set(), pending=None, fresh=True, queue=list(PRE))
     I.FAILS.clear()

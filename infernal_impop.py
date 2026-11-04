@@ -425,8 +425,11 @@ def try_op(op):
 
 
 def read_round(im):
-    """'ROUND 6/100' top right. OCR likes the label kept in, and mixes up O/0 and l/1."""
-    c = im.crop((round(1380 * F.W / 1920), 0, round(1570 * F.W / 1920), round(90 * F.H / 1080)))
+    """'ROUND 6/100' top right. OCR likes the label kept in, and mixes up O/0 and l/1.
+    An upgrade panel on the right slides the counter left (to about x=1020-1160): read it
+    there then, or a step waiting on cash hides every round change (round 76 was lost so)."""
+    x0 = 990 if panel_side(im) == PANEL_DX else 1380
+    c = im.crop((round(x0 * F.W / 1920), 0, round((x0 + 190) * F.W / 1920), round(90 * F.H / 1080)))
     for v in (c, c.resize((c.width * 2, c.height * 2))):
         t = F._ocr(v).upper().replace(" ", "").replace("O", "0").replace("I", "1").replace("L", "1")
         m = F.re.search(r"(\d+)/(?:1\d\d|[4-9]\d)\b", t)     # x/100, or x/40 on Easy Standard
@@ -461,6 +464,16 @@ def ingame():
     im = F.grab()
     if F.matches(im, IDLE):         # non-stop: start the next round the moment one ends
         start_round()
+        # Count the round we just started. An upgrade panel waiting for cash covers the
+        # round counter (a whole game once lost round 76 that way: its ability never fired),
+        # so the counter alone can't be trusted. Only count a start that took.
+        if G["round"] and F.matches(F.grab(), FAST):
+            G["round"] += 1
+            G["pending"] = None
+            F.STATS["status"] = f"round {G['round']}"
+            F.STATS["progress"] = time.time()
+            print("round", G["round"], "(started)")
+            queue_due(G["round"])
         return
     run_queue()
     if time.time() - G["last_ocr"] < 0.5:
@@ -472,7 +485,8 @@ def ingame():
     # take a new round only after two matching reads, and never jump by more than 15 (a panel
     # can cover the counter for several rounds while a step waits for cash)
     if r != G["round"]:
-        if G["pending"] == r and (G["round"] == 0 or 0 < r - G["round"] <= 15):
+        # (it may also pull the count back down a little: a start counted twice is corrected)
+        if G["pending"] == r and (G["round"] == 0 or -3 <= r - G["round"] <= 15):
             if G["round"] == 0 and not G["fresh"]:
                 # joined mid-game: every place/upgrade is safe to repeat (it checks the
                 # tower first), so re-run all of them; only targeting presses are skipped
@@ -489,6 +503,11 @@ def ingame():
             print("round", r)
         G["pending"] = r
         return
+    queue_due(r)
+
+
+def queue_due(r):
+    """Queue every step whose round has come."""
     for x in sorted(set(DURING) | set(STEPS)):
         if x in DURING and r >= x and x not in G["during"]:
             G["during"].add(x)

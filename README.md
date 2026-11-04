@@ -2,6 +2,10 @@
 
 AFK farms for Bloons TD 6. They read the screen and click like a player would.
 
+[![Download](https://img.shields.io/badge/Download-ZIP-2ea44f?style=for-the-badge&logo=github)](https://github.com/ivanchows/BTD6-Autofarm/archive/refs/heads/main.zip)
+
+Click **Download**, unzip it anywhere, install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run a farm (see [Running](#running)).
+
 Each map script is named `<map>_<mode>.py`. The shared code lives in `core.py` (menus, screens, OCR, stats box) and `infernal_impop.py` (checked placing and upgrading, which the other maps reuse).
 
 | Script | Map | Mode |
