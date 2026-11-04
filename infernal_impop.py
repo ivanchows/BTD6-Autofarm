@@ -187,7 +187,9 @@ def panel_side(im):
     for dx in (0, PANEL_DX):
         r, g, b = im.getpixel(_px(70 + dx, 155))
         r2, g2, b2 = im.getpixel(_px(60 + dx, 70))
-        if b > 170 and g > 140 and r < 90 and r2 > 160 and g2 > 115 and b2 < 130:
+        tan = r2 > 160 and g2 > 115 and b2 < 130
+        purple = b2 > 180 and r2 < 150 and g2 < 80      # a hero's panel has a purple title bar
+        if b > 170 and g > 140 and r < 90 and (tan or purple):
             return dx
     return None
 
@@ -543,10 +545,8 @@ def hero_is_ben():
 
 
 def ensure_ben():
-    """On the mode screen: if the hero isn't Benjamin, open Change Hero, pick him, come back."""
-    if hero_is_ben():
-        return
-    print("hero is not Benjamin: switching")
+    """On the mode screen: open Change Hero and pick Benjamin by his tile, every game. Going by the
+    tile (not the portrait) works whatever skin he wears; a portrait check broke on a new skin."""
     F.click(105, 975)                   # Change Hero
     F.wait(2)
     F.click(*BEN_TILE)
@@ -555,7 +555,6 @@ def ensure_ben():
     F.wait(1)
     F.click(78, 55)                     # back to the mode screen
     F.wait(2)
-    print("hero is Benjamin now" if hero_is_ben() else "!! could not confirm Benjamin")
 
 
 F.on_mode_screen = ensure_ben

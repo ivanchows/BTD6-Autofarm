@@ -121,7 +121,9 @@ I.STEPS = {
          + I.U(SPIKE, bot=1)          # 2-0-5 Perma-Spike, affordable around round 65
          + I.U(BOMB, top=1)           # 5-2-0 Bloon Crush
          # Crush holds the blimps back for ages: 0-3-0 MOAB Maulers end the rounds sooner
-         + [op for spot in MAULER_SPOTS for op in I.P("e", spot, (0, 3, 0)) + I.T(spot, "STRONG")]),
+         + [op for spot in MAULER_SPOTS for op in I.P("e", spot, (0, 3, 0)) + I.T(spot, "STRONG")]
+         # then each one on to 0-4-0 (MOAB Assassin)
+         + [op for spot in MAULER_SPOTS for op in I.U(spot, mid=1)]),
 }
 I.DURING = {}
 I.FINAL.clear()

@@ -555,7 +555,7 @@ def overlay():
     root.update()
     hwnd = user32.GetParent(root.winfo_id())
     style = user32.GetWindowLongW(hwnd, -20)                         # GWL_EXSTYLE
-    user32.SetWindowLongW(hwnd, -20, style | 0x80000 | 0x20 | 0x80)  # LAYERED|TRANSPARENT|TOOLWINDOW
+    user32.SetWindowLongW(hwnd, -20, style | 0x80000 | 0x20 | 0x80 | 0x08000000)  # LAYERED|TRANSPARENT|TOOLWINDOW|NOACTIVATE
     user32.SetWindowDisplayAffinity(hwnd, 0x11)                      # WDA_EXCLUDEFROMCAPTURE
 
     # Click-through, except while Ctrl is held: then it can be dragged with the mouse.
@@ -585,7 +585,7 @@ def overlay():
         held = bool(user32.GetAsyncKeyState(0x11) & 0x8000)
         if held != drag["on"]:
             drag["on"] = held
-            user32.SetWindowLongW(hwnd, -20, (style | 0x80000 | 0x80) | (0 if held else 0x20))
+            user32.SetWindowLongW(hwnd, -20, (style | 0x80000 | 0x80 | 0x08000000) | (0 if held else 0x20))
             label.config(fg="yellow" if held else "white")
         root.after(50, watch_ctrl)
     watch_ctrl()
@@ -646,13 +646,13 @@ def open_boxes(im):
     """Collection event: click every insta card, Esc back after each, then Continue."""
     if matches(im, CARDS_CONTINUE):
         click(*CONTINUE_BTN)
-        wait(2.5)
+        wait_for(EVENT, 3)
         return
     for x in find_cards(im):
         click(x, 540)
-        wait(2.5)
+        wait_for(INSTA_REVEAL, 2.5)     # Esc as soon as the card shows, not after a fixed wait
         key("\x1b")
-        wait(1.5)
+        wait_for(INSTA_CARDS, 1.5)
 
 
 FEATURED = [(1435, 410), (1560, 410), (1435, 520), (1560, 520)]   # the 4 featured instas
@@ -660,8 +660,8 @@ FEATURED = [(1435, 410), (1560, 410), (1435, 520), (1560, 520)]   # the 4 featur
 
 def pick_banana_farm(im):
     """User: on a full candy box, if a Banana Farm is among the featured instas, click it
-    before opening. Its icon is the only one with lots of banana yellow plus palm green
-    (the others measured <=1% yellow). Every featured row is saved to featured/ so the
+    before opening. Its icon is mostly bright palm-leaf green (measured 26% on the user's
+    picture of it). Every featured row is saved to featured/ so the
     test can be checked against what was really there."""
     folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "featured")
     os.makedirs(folder, exist_ok=True)
@@ -671,9 +671,10 @@ def pick_banana_farm(im):
         sx, sy = scr(x, y)
         sx, sy = sx - OX, sy - OY
         px = list(im.convert("RGB").crop((sx - 38, sy - 38, sx + 38, sy + 38)).getdata())
-        yellow = sum(r > 200 and g > 170 and b < 90 for r, g, b in px) / len(px)
-        green = sum(g > 150 and r < 120 and b < 100 for r, g, b in px) / len(px)
-        if yellow > 0.06 and green > 0.03:
+        # palm leaves: about a quarter of the Banana Farm art is bright leaf green (its bananas
+        # are tiny); the other featured icons seen so far measured 0
+        leaf = sum(g > 140 and g > r + 40 and g > b + 60 for r, g, b in px) / len(px)
+        if leaf > 0.12:
             print(f"featured insta at {(x, y)} looks like a Banana Farm: picking it")
             click(x, y)
             wait(1.5)
@@ -895,7 +896,7 @@ def farm():
             wait(4)
         elif matches(im, INSTA_REVEAL):
             key("\x1b")
-            wait(1.5)
+            wait_for(INSTA_CARDS, 1.5)
         elif matches(im, INSTA_CARDS):
             print("opening candy box")
             STATS["status"] = "opening candy box"
@@ -906,7 +907,7 @@ def farm():
                 pick_banana_farm(im)
                 print("collecting candy box")
                 click(*COLLECT_BTN)
-                wait(3)
+                wait_for(INSTA_CARDS, 3)
             else:
                 click(*EVENT_BACK_BTN)
                 wait(4)
