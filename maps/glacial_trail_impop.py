@@ -32,7 +32,7 @@ I.TOKENS.update(d=("NINJ", "INJA"), t=("ICE",), n=("MORT", "RTAR"), u=("SILAS", 
 
 # One list, bought strictly in order, each step the moment the cash covers it (round numbers
 # stopped fitting once the order changed: Perma-Spike landed on r73, not r68).
-D.PRE = I.P("q", DART) + I.P("d", NINJA) + I.T(NINJA, "STRONG")
+D.PRE = I.P("d", NINJA) + I.T(NINJA, "STRONG")     # no Dart (2026-11-05: does it change the freezes?)
 STEPS = {
     0: (I.U(NINJA, top=2)                                         # Ninja 2-0-0
         + I.P("u", SILAS)
@@ -40,17 +40,18 @@ STEPS = {
         + I.P("j", SPIKE, (0, 0, 2)) + I.T(SPIKE, "SMART") + I.U(SPIKE, bot=1)    # 0-0-3, Smart
         + I.U(SPIKE, top=2)                                      # Spike 2-0-3
         + I.U(ICE1, top=2, bot=3) + I.T(ICE1, "STRONG")          # Ice 1 2-0-3, Strong
-        + I.P("t", ICE2) + I.P("t", ICE3) + I.T(ICE3, "STRONG")  # the 2 Ice by the Spike and Silas
+        + I.P("t", ICE2) + I.P("t", ICE3)                        # the 2 Ice by the Spike and Silas
         + I.U(ICE1, bot=1)                                       # Ice 1 2-0-4
         + I.P("n", MORTAR, (0, 2, 0)) + [("mortar", None, (MORTAR,), "mortar -> aim under ice 1")]
         # (Ice 1 at 0-0-0 behind the Spike lost on r37-38; Ice 1 2-0-3 first got Spike 2-0-4 too
         #  late, r40; Spike 2-0-4 before the other 2 Ice lost on r38)
         + I.U(SPIKE, bot=1)                                      # Spike 2-0-4
-        + I.U(ICE2, mid=3) + I.U(ICE3, bot=3)
+        + I.U(ICE2, mid=3) + I.U(ICE3, bot=3) + I.T(ICE3, "STRONG")   # (an Ice Monkey only
+        #  has targeting once it's a Cryo Cannon: Strong straight after placing always failed)
         + I.U(ICE2, top=2, mid=1) + I.U(ICE3, top=2, bot=1)      # 2-4-0 and 2-0-4
         + I.U(SPIKE, bot=1)                                      # Perma-Spike 2-0-5
         + I.U(ICE1, bot=1)                                       # Icicle Impale 2-0-5
-        + I.U(ICE3, bot=1)                                       # second Icicle Impale
+        # (no second Icicle Impale: only one of each tier 5 can be on the map)
         + I.U(ICE2, mid=1)                                       # Absolute Zero 2-5-0
         + I.U(MORTAR, top=2, mid=2)),                            # Mortar 2-4-0
 }
@@ -161,9 +162,17 @@ def try_op(op):
             # panel's, or anything above the cash now, so it doesn't click again and again
             v, cash = _read_price(op[2][1]), I.read_cash()
             k = _pkey(op)
+            if cash is not None and ((v and v <= cash) or (not v and (F.price(*_pkey(op)) or 0) <= cash)):
+                # red although we can pay: the tower is frozen (it can't be upgraded until it
+                # thaws). Not a price problem: let other towers go first and come back to it
+                k2 = _key(op)
+                if k2 not in ICED or time.time() - ICED[k2] > ICED_FOR:
+                    print(f"{D.NICE.get(k2, k2)} is frozen (red at ${v} with ${cash}): other towers first")
+                ICED[k2] = time.time()
+                return done
             if v and cash is not None and v > cash:
                 F.set_price(*k, v)
-            elif cash is not None:
+            elif cash is not None and v:
                 F.set_price(*k, max(F.price(*k) or 0, cash + 100))
             print(f"price: {' '.join(map(str, k))} was too low, now ${F.price(*k)}")
         return done
@@ -222,12 +231,13 @@ def _save_progress():
 
 
 def remaining():
-    """Every step of the build not finished yet, in order (the hero is always down by then)."""
+    """Every step of the build not finished yet, in order (a placement saved as done, or of a
+    tower with any step done, is skipped; the hero too, only once it's saved as placed)."""
     # a placement counts as done once any step on that tower is: the Dart and Ninja (set up
     # before the first save) were re-placed 3 refused clicks each, a whole round apiece
     started = {_key(op) for op in D.PRE + list(I.STEPS[0]) if op[3] in DONE}
     return [op for op in list(I.STEPS[0])
-            if op[3] not in DONE and not (op[0] == "place" and (op[2][0] == "u" or _key(op) in started))]
+            if op[3] not in DONE and not (op[0] == "place" and _key(op) in started)]
 
 
 _try_op_g = try_op
@@ -236,6 +246,8 @@ _try_op_g = try_op
 def try_op(op):
     # The cash gate lives here too: dark_castle's run_queue runs several steps per call, so a
     # step behind a finished one skipped the gate in run_queue (Perma-Spike clicked at ~$5k)
+    if (I.G.get("round") or 0) < HOLD.get(_key(op), 0):
+        return False                # (run_queue takes several steps per call: hold it here too)
     price = must_wait(op) if op[0] in ("tier", "place") else None
     if price and not can_afford(price):
         return False
@@ -302,7 +314,10 @@ def can_afford(price):
         return False
     F.wait(0.1)
     b = I.read_cash()
-    return b is not None and b >= price and abs(a - b) <= max(200, a * 0.05)
+    ok = b is not None and b >= price and abs(a - b) <= max(200, a * 0.05)
+    if ok and price >= 5000:
+        print(f"cash read {a} and {b}: buying the ${price} step")
+    return ok
 
 
 def must_wait(op):
@@ -408,6 +423,9 @@ def _ensure_placed(q):
 
 
 RESUMED = {"done": False}
+HOLD = {repr(SPIKE): 21, repr(MORTAR): 51}     # no steps on these before that round (user)
+FIRST_FROM = {repr(MORTAR): 51}   # from that round its steps jump the queue (Mortar done ~r61;
+                                  # at the back it came at r89-93 and froze for 4 rounds)
 FROZEN_CHECK = False
 
 
@@ -420,7 +438,9 @@ def run_queue():
         if I.G["round"] <= 7:       # a brand-new game: last game's progress means nothing
             DONE.clear()
             _save_progress()
-        I.G["queue"] = remaining()
+            I.G["queue"] = list(D.PRE) + list(I.STEPS[0])     # the opening too (the Ninja)
+        else:
+            I.G["queue"] = remaining()
         print(f"glacial: carrying on, {len(I.G['queue'])} steps left")
     q = I.G["queue"]
     now = time.time()
@@ -435,6 +455,14 @@ def run_queue():
                     print(f"{D.NICE.get(k, k)} is frozen: other towers go first")
                 ICED[k] = now
     iced = {k for k, t in ICED.items() if now - t < ICED_FOR}
+    for k, r in FIRST_FROM.items():
+        if (I.G.get("round") or 0) >= r and q and _key(q[0]) != k:
+            mine = [op for op in q if _key(op) == k]
+            if mine:
+                I.G["queue"] = q = mine + [op for op in q if _key(op) != k]
+    for k, r in HOLD.items():       # a held tower waits for its round: the steps after it go first
+        if (I.G.get("round") or 0) < r:
+            iced.add(k)
     if q and _key(q[0]) in iced:
         for i, op in enumerate(q):
             if _key(op) not in iced:
@@ -482,6 +510,7 @@ def setup():
     """A fresh game clears the saved progress; a rejoin carries on from the first step not
     done yet (it used to re-check every step from the Ninja on, which wasted rounds)."""
     D.setup()
+    RESUMED["done"] = True          # set up here: the --running take-over below isn't needed
     r = I.G.get("round") or 0
     if r > 7:
         RESUMED["done"] = True

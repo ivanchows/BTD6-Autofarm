@@ -68,12 +68,16 @@ def read_cash():
     im = F.grab()
     c = im.crop((round(330 * F.W / 1920), round(10 * F.H / 1080),
                  round(1000 * F.W / 1920), round(62 * F.H / 1080)))
+    # Read it two ways and keep the SMALLER: a misread only ever came out too high ('$32,163'
+    # as 321,634; '$21,180' as 211,161), and too high buys early while too low only waits.
+    # Whole thousands groups only, and 4+ digits with no comma is not trusted.
+    got = []
     for v in (c, c.resize((c.width * 2, c.height * 2))):
         t = F._ocr(v).replace(" ", "").replace(".", ",").upper().replace("O", "0")
-        m = F.re.search(r"\$([\d,]+)", t)
-        if m:
-            return int(m.group(1).replace(",", ""))
-    return None
+        m = F.re.search(r"\$(\d{1,3}(?:,\d{3})*)", t)
+        if m and ("," in m.group(1) or len(F.re.match(r"\$(\d*)", t[m.start():]).group(1)) <= 3):
+            got.append(int(m.group(1).replace(",", "")))
+    return min(got) if got else None
 
 
 SEL = {"pos": None}     # tower whose upgrade panel is open
