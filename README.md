@@ -9,6 +9,7 @@ Combinations of easy and impoppable maps.
 
 1. Click **Download** above and unzip it.
 2. Double-click **Install.bat** (it installs [uv](https://docs.astral.sh/uv/), which runs the farm).
+   If it says it couldn't install uv, check your internet or antivirus and run it again.
 3. In BTD6, set the game to **1920x1080** and **English**.
 4. Keep the **default keybinds**, but set these 3 yourself (they start blank):
 
@@ -21,18 +22,12 @@ Combinations of easy and impoppable maps.
 ## Play
 
 1. Open BTD6 and go to the home screen.
-2. Open a terminal in the folder and type:
+2. Double-click **Play.bat**. It plays the map with **bonus rewards** in the candy event and switches maps by itself.
+
+Want one map only? Open a terminal in the folder and type (swap the file for any map below):
 
 ```
 uv run watchdog.py sanctuary_deflation.py
-```
-
-Swap `sanctuary_deflation.py` for any map below.
-
-Or let it pick the map with **bonus rewards** in the candy event (it switches by itself):
-
-```
-uv run watchdog.py bonus
 ```
 
 | Keys | What it does |
