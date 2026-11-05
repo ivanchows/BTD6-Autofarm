@@ -92,7 +92,8 @@ NAV = [((958, 945), MAP_SELECT), ((1335, 975), EXPERT_PAGE), ((1645, 430), INFER
        ((535, 260), DIFFICULTY), ((625, 420), MODE), ((1280, 450), DEFLATION_POPUP)]
 UNKNOWN_AFTER = 10   # seconds on an unknown screen before clicking through popups
 
-STOP_KEYS = (0x60, 0x2D, 0x77)  # Numpad 0, Numpad 0 with NumLock off (Insert), F8
+import keys as _keys
+STOP_KEYS = _keys.load("stop")      # keys.json, plus Numpad 0 / Insert / F8
 STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "state.json")
 
 # ---------------------------------------------------------------- window
@@ -324,7 +325,7 @@ def check_stop():
         print("resumed")
 
 
-PAUSE_KEYS = (0x61, 0x23)   # Numpad 1, and End (Numpad 1 with NumLock off)
+PAUSE_KEYS = _keys.load("pause")    # keys.json, plus Numpad 1 / End
 _pause_was = {"down": False}
 
 

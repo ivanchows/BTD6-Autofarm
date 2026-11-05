@@ -19,6 +19,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(HERE, "state.json")
 FARM_LOG = os.path.join(HERE, "farm.log")
 LOG = os.path.join(HERE, "watchdog.log")
+import keys
+STOP_KEYS = keys.load("stop")    # keys.json, plus Numpad 0 / Insert / F8
 HEARTBEAT_LIMIT = 120
 PROGRESS_LIMIT = 30 * 60
 SCRIPT = sys.argv[1] if len(sys.argv) > 1 else "infernal_easy.py"   # or any map script
@@ -46,7 +48,7 @@ def state():
 
 def stop_pressed():
     # 0x8001: held now, or pressed at any point since the last poll
-    return any(user32.GetAsyncKeyState(k) & 0x8001 for k in (0x60, 0x2D, 0x77))
+    return any(user32.GetAsyncKeyState(k) & 0x8001 for k in STOP_KEYS)
 
 
 def start_farm(extra=()):

@@ -1,101 +1,69 @@
 # BTD6-Autofarm
 
-AFK farms for Bloons TD 6. They read the screen and click like a player would.
+Plays Bloons TD 6 for you while you're away.
 
 [![Download](https://img.shields.io/badge/Download-ZIP-2ea44f?style=for-the-badge&logo=github)](https://github.com/ivanchows/BTD6-Autofarm/archive/refs/heads/main.zip)
 
-Click **Download**, unzip it anywhere, install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run a farm (see [Running](#running)).
+## Setup (once)
 
-Each map script lives in `maps/` and is named `<map>_<mode>.py`. Shared code: `core.py` (menus, screens, OCR, stats box) and `maps/infernal_impop.py` (checked placing and upgrading, which the other maps reuse). `watchdog.py` finds a map by its file name alone.
+1. Click **Download** above and unzip it.
+2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/).
+3. In BTD6, set the game to **1920x1080** and **English**.
+4. Keep the **default keybinds**, but set these 3 yourself (they start blank):
 
-| Script | Map | Mode |
+| Monkey | Key |
+|---|---|
+| Desperado | `;` |
+| Mermonkey | `O` |
+| Skywarden | `P` |
+
+## Play
+
+1. Open BTD6 and go to the home screen.
+2. Open a terminal in the folder and type:
+
+```
+uv run watchdog.py sanctuary_deflation.py
+```
+
+Swap `sanctuary_deflation.py` for any map below.
+
+| Keys | What it does |
+|---|---|
+| `Numpad 1` | Pause / go |
+| `Numpad 0` | Stop |
+
+No numpad? Open `keys.json` and pick other keys, like this:
+
+```
+{
+  "pause": "F9",
+  "stop": "F10"
+}
+```
+
+Pick keys the game doesn't use. Moving the mouse to the top-left corner also stops it.
+
+It only plays while BTD6 is on your screen. Tab out and it waits.
+
+## Maps
+
+| File | Map | Mode |
 |---|---|---|
 | `infernal_easy.py` | Infernal | Easy, Deflation |
 | `flooded_easy.py` | Flooded Valley | Easy, Deflation |
-| `infernal_impop.py` | Infernal | Hard, Impoppable (Benjamin) |
-| `dark_castle_impop.py` | Dark Castle | Hard, Impoppable (Striker Jones) |
-| `quad_easy.py` | Quad | Easy, Standard (Etienne) |
-| `muddy_puddles_impop.py` | Muddy Puddles | Hard, Impoppable (Psi) |
-| `workshop_easy.py` | Workshop | Easy, Standard (Sauda) |
-| `glacial_trail_impop.py` | Glacial Trail | Hard, Impoppable (Silas) |
-| `dark_dungeons_easy.py` | Dark Dungeons | Easy, Standard (Obyn) |
-| `bloody_puddles_easy.py` | Bloody Puddles | Easy, Standard (no hero) |
-| `tricky_tracks_easy.py` | Tricky Tracks | Easy, Standard (Quincy) |
-| `ouch_easy.py` | #Ouch | Easy, Standard (no hero) |
-| `sanctuary_impop.py` | Sanctuary | Hard, Impoppable (Obyn) |
-| `sanctuary_deflation.py` | Sanctuary | Easy, Deflation (Obyn) |
+| `sanctuary_deflation.py` | Sanctuary | Easy, Deflation |
+| `ravine_deflation.py` | Ravine | Easy, Deflation |
+| `quad_easy.py` | Quad | Easy |
+| `workshop_easy.py` | Workshop | Easy |
+| `dark_dungeons_easy.py` | Dark Dungeons | Easy |
+| `bloody_puddles_easy.py` | Bloody Puddles | Easy |
+| `tricky_tracks_easy.py` | Tricky Tracks | Easy |
+| `ouch_easy.py` | #Ouch | Easy |
+| `infernal_impop.py` | Infernal | Impoppable |
+| `dark_castle_impop.py` | Dark Castle | Impoppable |
+| `muddy_puddles_impop.py` | Muddy Puddles | Impoppable |
+| `glacial_trail_impop.py` | Glacial Trail | Impoppable |
+| `sanctuary_impop.py` | Sanctuary | Impoppable |
 
-## Requirements
-
-| | |
-|---|---|
-| Platform | Windows 10 or 11 (uses Windows input, window and OCR APIs) |
-| Game | Bloons TD 6 on Steam. Tested on Steam build 26122510 (updated 2026-10-22) |
-| Resolution | 1920x1080, fullscreen or borderless, on the main monitor. Positions scale to other 16:9 sizes but only 1920x1080 is tested |
-| Display scaling | Any (the scripts are DPI aware) |
-| Language | Game in English, and the English Windows OCR language pack installed |
-| Python | 3.12 (tested 3.12.15), run through [uv](https://docs.astral.sh/uv/) 0.13 or newer |
-| Hotkeys | BTD6 defaults (see [Hotkeys](#hotkeys)) |
-| Unlocks | The maps, heroes and every upgrade each farm buys |
-
-### Python dependencies
-
-uv installs these on the first run (they're declared at the top of each script):
-
-- `mss`
-- `pillow`
-- `winrt-Windows.Media.Ocr`
-- `winrt-Windows.Graphics.Imaging`
-- `winrt-Windows.Storage.Streams`
-- `winrt-Windows.Foundation`
-- `winrt-Windows.Foundation.Collections`
-- `winrt-Windows.Globalization`
-
-## Hotkeys
-
-The farms press the game's default keys, so keep these bound in BTD6's settings.
-
-| Action | Key |
-|---|---|
-| Start round / fast forward | `Space` |
-| Upgrade top / middle / bottom path | `,` `.` `/` |
-| Next targeting | `Tab` |
-| Hero | `U` |
-| Hero and tower abilities | `1` to `0`, `-`, `=` (in the order they unlock) |
-| Sell | `Backspace` |
-
-| Tower | Key | Tower | Key |
-|---|---|---|---|
-| Dart Monkey | `Q` | Dartling Gunner | `M` |
-| Boomerang Monkey | `W` | Wizard Monkey | `A` |
-| Bomb Shooter | `E` | Super Monkey | `S` |
-| Tack Shooter | `R` | Ninja Monkey | `D` |
-| Ice Monkey | `T` | Alchemist | `F` |
-| Glue Gunner | `Y` | Druid | `G` |
-| Desperado | `;` | Mermonkey | `O` |
-| Sniper Monkey | `Z` | Skywarden | `P` |
-| Monkey Sub | `X` | Banana Farm | `H` |
-| Monkey Buccaneer | `C` | Spike Factory | `J` |
-| Monkey Ace | `V` | Monkey Village | `K` |
-| Heli Pilot | `B` | Engineer Monkey | `L` |
-| Mortar Monkey | `N` | Beast Handler | `I` |
-
-The farm's own keys, read even while the game has focus:
-
-| Key | Does |
-|---|---|
-| `Numpad 1` (or `End`) | Pause / resume |
-| `Numpad 0` (or `Insert`, `F8`) | Stop the farm and the watchdog |
-| `Ctrl` held | Drag the stats box |
-
-## Running
-
-Start BTD6 on the home screen, then run a farm under the watchdog, which restarts it if it crashes or stalls and relaunches the game through Steam:
-
-```
-uv run watchdog.py dark_castle_impop.py
-```
-
-Numpad 1 pauses and resumes, Numpad 0 stops. The farm only acts while BTD6 is the front window.
-
-A stats box sits over the game: runs, uptime, XP, cash, and the next tower step (or "done"). Hold Ctrl to drag it; it remembers where you left it.
+You need the map, the hero and the upgrades unlocked.
