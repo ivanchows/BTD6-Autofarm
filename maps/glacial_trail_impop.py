@@ -30,7 +30,8 @@ D.FUZZ["SMART"] = ("SMAR", "MART")
 I.TOKENS.update(d=("NINJ", "INJA"), t=("ICE",), n=("MORT", "RTAR"), u=("SILAS", "ILAS"),
                 j=("SPIKE", "FACT"), q=("DART",))
 
-# Steps are queued one round before the round they're listed for, so the cash goes straight in.
+# One list, bought strictly in order, each step the moment the cash covers it (round numbers
+# stopped fitting once the order changed: Perma-Spike landed on r73, not r68).
 D.PRE = I.P("q", DART) + I.P("d", NINJA) + I.T(NINJA, "STRONG")
 STEPS = {
     0: (I.U(NINJA, top=2)                                         # Ninja 2-0-0
@@ -41,17 +42,17 @@ STEPS = {
         + I.U(ICE1, top=2, bot=3) + I.T(ICE1, "STRONG")          # Ice 1 2-0-3, Strong
         + I.P("t", ICE2) + I.P("t", ICE3) + I.T(ICE3, "STRONG")  # the 2 Ice by the Spike and Silas
         + I.U(ICE1, bot=1)                                       # Ice 1 2-0-4
-        + I.P("n", MORTAR, (0, 2, 0)) + [("mortar", None, (MORTAR,), "mortar -> aim under ice 1")]),
-    # (Ice 1 at 0-0-0 behind the Spike lost on r37-38; Ice 1 2-0-3 first got Spike 2-0-4 too late, r40;
-    #  Spike 2-0-4 before the other 2 Ice lost on r38)
-    46: (I.U(SPIKE, bot=1)                                       # Spike 2-0-4
-         + I.U(ICE2, mid=3) + I.U(ICE3, bot=3)
-         + I.U(ICE2, top=2, mid=1) + I.U(ICE3, top=2, bot=1)),   # 2-4-0 and 2-0-4
-    68: I.U(SPIKE, bot=1),                                       # Perma-Spike 2-0-5
-    79: I.U(ICE1, bot=1),                                        # Icicle Impale 2-0-5
-    85: I.U(ICE3, bot=1),                                        # second Icicle Impale
-    92: I.U(ICE2, mid=1),                                        # Absolute Zero 2-5-0
-    96: I.U(MORTAR, top=2, mid=2),                               # Mortar 2-4-0
+        + I.P("n", MORTAR, (0, 2, 0)) + [("mortar", None, (MORTAR,), "mortar -> aim under ice 1")]
+        # (Ice 1 at 0-0-0 behind the Spike lost on r37-38; Ice 1 2-0-3 first got Spike 2-0-4 too
+        #  late, r40; Spike 2-0-4 before the other 2 Ice lost on r38)
+        + I.U(SPIKE, bot=1)                                      # Spike 2-0-4
+        + I.U(ICE2, mid=3) + I.U(ICE3, bot=3)
+        + I.U(ICE2, top=2, mid=1) + I.U(ICE3, top=2, bot=1)      # 2-4-0 and 2-0-4
+        + I.U(SPIKE, bot=1)                                      # Perma-Spike 2-0-5
+        + I.U(ICE1, bot=1)                                       # Icicle Impale 2-0-5
+        + I.U(ICE3, bot=1)                                       # second Icicle Impale
+        + I.U(ICE2, mid=1)                                       # Absolute Zero 2-5-0
+        + I.U(MORTAR, top=2, mid=2)),                            # Mortar 2-4-0
 }
 I.STEPS = {max(0, k - 1) if k else 0: v for k, v in STEPS.items()}
 I.DURING = {}
@@ -108,16 +109,40 @@ def _key(op):
 
 def try_op(op):
     """'mortar': open its panel, press Set Target, click the aim point under Ice 1."""
+    if op[0] in ("tier", "place") and price_of(op) is None:
+        cash0 = I.read_cash()
+        before = SEEN.get(_key(op))
+        done = (_try_op if op[0] == "place" else _tier)(op)
+        _note_tiers(op)
+        cash1 = I.read_cash()
+        after = SEEN.get(_key(op))
+        # a cash drop counts as the price only if this step really bought it: the tower went
+        # up exactly one tier (a re-check of a tier it had paid nothing), or it really placed
+        bought = (op[0] == "place" and done and I.FAILS.get(op[3], 0) == 0) or (
+            op[0] == "tier" and before is not None and after is not None
+            and before[op[2][1]] == op[2][2] - 1 and after[op[2][1]] == op[2][2])
+        if bought and cash0 is not None and cash1 is not None and cash0 - cash1 >= 30:
+            _learn(op, round((cash0 - cash1) / 5) * 5, "paid")
+        elif not done and op[0] == "tier" and I.SEL["pos"] is not None:
+            v = _read_price(op[2][1])
+            red = _price_red(op[2][1])
+            # believable only if red agrees with it: red exactly when it's above the cash
+            if v and cash1 is not None and red is not None and red == (v > cash1):
+                _learn(op, v, "panel")
+        return done
     if op[0] == "tier":
+        done = _tier(op)
+        _note_tiers(op)
+        return done
+    if op[0] != "mortar":
+        return _try_op(op)
+    return _aim_mortar()
+
+
+def _tier(op):
+    if True:
         done = _try_op(op)
         k = _key(op)
-        if not done and I.SEL["pos"] is not None and _pkey(op) not in PRICE:
-            v = _read_price(op[2][1])
-            cash = I.read_cash()
-            # only a price we couldn't pay is believable: red on the panel and above the cash
-            if v and _price_red(op[2][1]) and (cash is None or v > cash):
-                PRICE[_pkey(op)] = (v, time.time())
-                print(f"{op[3]}: costs ${v}, waiting for the cash")
         if done or I.SEL["pos"] is None or _price_red(op[2][1]) is not False:
             STREAK[k] = 0               # bought, no panel, or can't afford: not iced
         else:
@@ -128,8 +153,9 @@ def try_op(op):
                 ICED[k] = time.time()
                 STREAK[k] = 0
         return done
-    if op[0] != "mortar":
-        return _try_op(op)
+
+
+def _aim_mortar():
     I.select(MORTAR)
     F.wait(0.3)
     dx = I.panel_side(F.grab())
@@ -144,32 +170,105 @@ def try_op(op):
     return True
 
 
+# --- progress, so a restart carries on instead of starting over ----------------------------------
+# Every finished step's label is saved; a restart in the same game queues only what's left.
+# A new game (set up from round 0) clears it.
+PROGRESS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "glacial_progress.json")
+try:
+    DONE = set(json.load(open(PROGRESS_FILE, encoding="utf-8")))
+except (OSError, ValueError):
+    DONE = set()
+
+
+def _save_progress():
+    try:
+        with open(PROGRESS_FILE, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(sorted(DONE), f, indent=0)
+    except OSError:
+        pass
+
+
+def remaining():
+    """Every step of the build not finished yet, in order (the hero is always down by then)."""
+    return [op for op in D.PRE + list(I.STEPS[0])
+            if op[3] not in DONE and not (op[0] == "place" and op[2][0] == "u")]
+
+
+_try_op_g = try_op
+
+
+def try_op(op):
+    done = _try_op_g(op)
+    if done and op[3] not in DONE:
+        DONE.add(op[3])
+        _save_progress()
+    return done
+
+
 I.select, I.try_op = select, try_op
 _run_queue = I.run_queue
 
 
 # --- wait for the cash instead of clicking -----------------------------------------------------
-# Impoppable prices (Medium x 1.2). Upgrade prices are read off the panel the first time a buy
-# fails, then the step just watches the cash and only clicks once there is enough.
-PLACE_PRICE = {"t": 480}       # Ice, as the shop shows it here
-PRICE = {}          # step key -> (price, when it was read)
-PRICE_FOR = 20      # seconds a read price is trusted
+# Every price is learned once (the cash drop on a buy, or the panel's price when a buy fails)
+# and saved, so a step just watches the cash and clicks only once there is enough. A step
+# whose price isn't known yet is tried at most every UNKNOWN_EVERY seconds.
+PRICES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "glacial_prices.json")
+try:
+    PRICES = json.load(open(PRICES_FILE, encoding="utf-8"))
+except (OSError, ValueError):
+    PRICES = {}
+UNKNOWN_EVERY = 6
+LAST_BLIND = {"t": 0}
 
 
 def _pkey(op):
-    return (_key(op), op[2][1], op[2][2]) if op[0] == "tier" else None
+    if op[0] == "place":
+        return f"place {op[2][0]}"
+    if op[0] == "tier":
+        return f"{D.NICE.get(_key(op), _key(op))} {'top mid bot'.split()[op[2][1]]} {op[2][2]}"
+    return None
+
+
+def _learn(op, v, how):
+    k = _pkey(op)
+    if k and v and k not in PRICES:
+        PRICES[k] = int(v)
+        print(f"price: {k} = ${v} ({how})")
+        try:
+            with open(PRICES_FILE, "w", encoding="utf-8", newline="\n") as f:
+                json.dump(PRICES, f, indent=1, sort_keys=True)
+        except OSError:
+            pass
+
+
+SEEN = {}           # tower key -> its tiers as last read off its panel this run
+
+
+def _note_tiers(op):
+    if op[0] == "tier" and I.SEL["pos"] is not None and repr(I.SEL["pos"]) == _key(op):
+        cur = I.tiers()
+        if cur:
+            SEEN[_key(op)] = list(cur)
 
 
 def price_of(op):
-    if op[0] == "place":
-        return PLACE_PRICE.get(op[2][0])
+    k = _pkey(op)
+    return PRICES.get(k) if k else None
+
+
+def must_wait(op):
+    """The price to wait for, or None to go ahead. A tier step only waits once its tower's
+    panel has shown it below that level: after a restart the farm re-checks tiers it already
+    owns, and those must not wait for cash."""
+    price = price_of(op)
+    if not price:
+        return None
     if op[0] == "tier":
-        got = PRICE.get(_pkey(op))
-        if got and time.time() - got[1] > PRICE_FOR:
-            PRICE.pop(_pkey(op), None)  # a misread price must not hold a step for good:
-            return None                 # click again now and then, and read it fresh
-        return got and got[0]
-    return None
+        cur = SEEN.get(_key(op))
+        if cur is None or cur[op[2][1]] >= op[2][2]:
+            return None
+    return price
 
 
 def _read_price(p):
@@ -190,6 +289,38 @@ def _read_price(p):
         s = s[1:]               # '$420' read as '4420': the $ came out as a digit
     v = int(s.replace(",", ""))
     return v if 50 <= v <= 200000 else None
+
+
+# --- frozen towers, seen on screen -------------------------------------------------------------
+# A frozen tower sits in a pale see-through ice block. Count ice-block pixels over the tower
+# (sprites draw above the click point); each tower's own look sets its baseline (Ice Monkeys
+# are white and blue themselves), and a big jump over it means frozen.
+BASE = {}
+
+
+def _ice_frac(im, pos):
+    x0, y0 = I.xy(pos)
+    n = ice = 0
+    for x in range(x0 - 30, x0 + 31, 3):
+        for y in range(y0 - 50, y0 + 11, 3):
+            r, g, b = im.getpixel(I._px(x, y))[:3]
+            n += 1
+            ice += b > 200 and g > 200 and r > 150 and b - r > 8
+    return ice / n
+
+
+HITS = {}
+
+
+def frozen(pos, im=None):
+    """Measured 2026-11-04: Mortar 0.02 thawed, 0.32 frozen; Spike 0.00 and 0.40. Ice Monkeys
+    and snow read 0.1-0.3 on their own, hence the per-tower baseline; two reads in a row."""
+    f = _ice_frac(im or F.grab(), pos)
+    k = repr(pos)
+    BASE[k] = min(BASE.get(k, 0.3), f)
+    hit = f >= max(0.28, BASE[k] + 0.22)
+    HITS[k] = HITS.get(k, 0) + 1 if hit else 0
+    return HITS[k] >= 2
 
 
 # A restart mid-game re-queues upgrades but no placements (infernal_impop's round handler), so
@@ -215,12 +346,30 @@ def _ensure_placed(q):
         q.insert(0, PLACE_OP[k])
 
 
+RESUMED = {"done": False}
+
+
 def run_queue():
     """While the head step's tower is iced, move the first step for a tower that isn't iced
     to the front (its own order kept), so the cash goes where it can be spent. A step whose
     price is known waits, without clicking, until the cash covers it."""
+    if not RESUMED["done"] and "--running" in sys.argv and I.G.get("round"):
+        RESUMED["done"] = True      # restarted mid-game: queue only what's left
+        if I.G["round"] <= 7:       # a brand-new game: last game's progress means nothing
+            DONE.clear()
+            _save_progress()
+        I.G["queue"] = remaining()
+        print(f"glacial: carrying on, {len(I.G['queue'])} steps left")
     q = I.G["queue"]
     now = time.time()
+    if q and now - I.G["last_try"] >= D.RETRY and q[0][0] in ("tier", "target", "mortar"):
+        im = F.grab()
+        for op in q[:6]:            # look, don't click: mark frozen towers before trying them
+            if op[0] in ("tier", "target", "mortar") and frozen(op[2][0], im):
+                k = _key(op)
+                if k not in ICED or now - ICED[k] > ICED_FOR:
+                    print(f"{D.NICE.get(k, k)} is frozen: other towers go first")
+                ICED[k] = now
     iced = {k for k, t in ICED.items() if now - t < ICED_FOR}
     if q and _key(q[0]) in iced:
         for i, op in enumerate(q):
@@ -228,14 +377,24 @@ def run_queue():
                 q.insert(0, q.pop(i))
                 break
     if q and now - I.G["last_try"] >= D.RETRY:
+        if _key(q[0]) in iced:      # everything left is frozen: wait, don't click
+            I.G["last_try"] = now
+            return
         _ensure_placed(q)
-        price = price_of(q[0])
+        price = must_wait(q[0])
         if price:
             cash = I.read_cash()
             if cash is not None and cash < price:
                 I.G["last_try"] = now
                 F.STATS["next"] = f"{D.next_text()} (${cash}/${price})"
                 return
+        elif price_of(q[0]) or (q[0][0] == "tier" and (
+                SEEN.get(_key(q[0])) is None or SEEN[_key(q[0])][q[0][2][1]] >= q[0][2][2])):
+            pass                    # tiers not seen yet, or already there: one look, no wait
+        elif q[0][0] in ("tier", "place") and now - LAST_BLIND["t"] < UNKNOWN_EVERY:
+            return                  # price not learned yet: try now and then, not twice a second
+        elif q[0][0] in ("tier", "place"):
+            LAST_BLIND["t"] = now
     _run_queue()
 
 
@@ -256,24 +415,17 @@ def pick_silas():
 
 
 def setup():
-    """A rejoin used to take every earlier step as bought, so a game the farm missed rounds of
-    lost with nothing queued. Re-check them: a tier already there and a tower already standing
-    are passed over, and prices gate the rest."""
+    """A fresh game clears the saved progress; a rejoin carries on from the first step not
+    done yet (it used to re-check every step from the Ninja on, which wasted rounds)."""
     D.setup()
     r = I.G.get("round") or 0
-    if r > 7 and not I.G["queue"]:
-        ops = [op for k in sorted(I.STEPS) if k < r for op in I.STEPS[k]]
-        # one check per tower path, at the highest level it should have by now (a tier step
-        # keeps buying until it's there), instead of walking every single tier from the Ninja on
-        top = {}
-        for op in ops:
-            if op[0] == "tier":
-                top[(repr(op[2][0]), op[2][1])] = op
-        keep = set(map(id, top.values()))
-        # the hero is always down by now, and its check clicks a spot Ice 2 crowds (it stuck)
-        I.G["queue"] = [op for op in ops if (op[0] != "tier" or id(op) in keep)
-                        and not (op[0] == "place" and op[2][0] == "u")]
-        print(f"glacial: re-checking {len(I.G['queue'])} earlier steps")
+    if r > 7:
+        RESUMED["done"] = True
+        I.G["queue"] = remaining()
+        print(f"glacial: carrying on, {len(I.G['queue'])} steps left")
+    else:
+        DONE.clear()
+        _save_progress()
 
 
 F.setup = setup
