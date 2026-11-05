@@ -28,23 +28,33 @@ uv run watchdog.py sanctuary_deflation.py
 
 Swap `sanctuary_deflation.py` for any map below.
 
+Or let it pick the map with **bonus rewards** in the candy event (it switches by itself):
+
+```
+uv run watchdog.py bonus
+```
+
 | Keys | What it does |
 |---|---|
 | `Numpad 1` | Pause / go |
 | `Numpad 0` | Stop |
+| `Numpad 2` | AFK mode on / off |
 
-No numpad? Open `keys.json` and pick other keys, like this:
+Change these in `settings.json`:
 
 ```
 {
   "pause": "F9",
-  "stop": "F10"
+  "stop": "F10",
+  "afk": "F11"
 }
 ```
 
-Pick keys the game doesn't use. Moving the mouse to the top-left corner also stops it.
+No numpad? Pick other keys the game doesn't use. Moving the mouse to the top-left corner also stops it.
 
-It only plays while BTD6 is on your screen. Tab out and it waits.
+It only clicks while BTD6 is on your screen. Tab out and it waits, so you can do other things.
+
+**AFK mode** (`Numpad 2`, or add `afk` to the command): it tabs back into BTD6 by itself 5 seconds after you leave. The info box says "AFK mode" while it's on.
 
 ## Maps
 

@@ -93,7 +93,7 @@ NAV = [((958, 945), MAP_SELECT), ((1335, 975), EXPERT_PAGE), ((1645, 430), INFER
 UNKNOWN_AFTER = 10   # seconds on an unknown screen before clicking through popups
 
 import keys as _keys
-STOP_KEYS = _keys.load("stop")      # keys.json, plus Numpad 0 / Insert / F8
+STOP_KEYS = _keys.load("stop")      # settings.json, plus Numpad 0 / Insert / F8
 STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "state.json")
 
 # ---------------------------------------------------------------- window
@@ -325,7 +325,7 @@ def check_stop():
         print("resumed")
 
 
-PAUSE_KEYS = _keys.load("pause")    # keys.json, plus Numpad 1 / End
+PAUSE_KEYS = _keys.load("pause")    # settings.json, plus Numpad 1 / End
 _pause_was = {"down": False}
 
 
@@ -407,23 +407,34 @@ def _close_switcher():
 _held = {"since": None}
 
 
+AFK_KEYS = _keys.load("afk")    # settings.json, plus Numpad 2: AFK mode on/off
+FOCUS_AFTER = 5         # seconds tabbed out before AFK mode pulls the game back
+
+
 def in_front():
-    """Never click or type into another window. The farm doesn't pull the game forward any
-    more (user's call): while something else is in front it just waits, and carries on
-    once BTD6 is the front window again."""
+    """Never click or type into another window. Normally it just waits while something else is
+    in front; in AFK mode it tabs back into BTD6 after FOCUS_AFTER s."""
     if user32.GetForegroundWindow() == HWND:
         _held["since"] = None
         return True
     if _held["since"] is None:
         _held["since"] = time.time()
-        print("BTD6 is not the front window: paused until it is")
+        print("BTD6 is not the front window: " + ("tabbing back in" if STATS.get("afk") else "paused until it is"))
+    if STATS.get("afk") and time.time() - _held["since"] >= FOCUS_AFTER:
+        focus()
+        if user32.GetForegroundWindow() == HWND:
+            print("tabbed back into BTD6")
+            _held["since"] = None
+            return True
+        _held["since"] = time.time()    # refused: try again in FOCUS_AFTER s
     STATS["progress"] = time.time()     # paused on purpose: don't let the watchdog call it stuck
     STATS["status"] = "paused (game not in front)"
     return False
 
 
 # ---------------------------------------------------------------- stats
-STATS = {"start": time.time(), "wins": 0, "losses": 0, "xp": 0, "mm": 0,
+STATS = {"start": time.time(), "wins": 0, "losses": 0, "xp": 0, "mm": 0, "candy": 0,
+         "afk": bool(os.environ.get("BTD6_AFK")),     # `watchdog.py <map> afk`, or Numpad 2
          "run_start": None, "last_run": None, "status": "starting"}
 _home = {}   # last OCR read of the home screen: level, xp, need, mm
 
@@ -434,7 +445,9 @@ def load_state():
         with open(STATE_FILE, encoding="utf-8") as f:
             st = json.load(f)
         if time.time() - st.get("heartbeat", 0) < 7200 and not st["stats"].get("stopped"):
-            STATS.update({k: st["stats"][k] for k in ("start", "wins", "losses", "xp", "mm", "last_run")})
+            STATS.update({k: st["stats"][k] for k in ("start", "wins", "losses", "xp", "mm", "last_run") if k in st["stats"]})
+            STATS["candy"] = st["stats"].get("candy", 0)
+            STATS["afk"] = st["stats"].get("afk", STATS["afk"])   # kept across map switches
             _home.update(st.get("home", {}))
     except Exception:
         pass
@@ -538,6 +551,7 @@ def _hms(sec):
 def overlay():
     """Small always-on-top stats box over the game's top-left. Click-through and left out
     of screen captures, so the farm's own pixel checks never see it."""
+    prev = user32.GetForegroundWindow()     # showing the box activates it: give focus back after
     root = tk.Tk()
     root.overrideredirect(True)
     root.attributes("-topmost", True)
@@ -557,6 +571,9 @@ def overlay():
     hwnd = user32.GetParent(root.winfo_id())
     style = user32.GetWindowLongW(hwnd, -20)                         # GWL_EXSTYLE
     user32.SetWindowLongW(hwnd, -20, style | 0x80000 | 0x20 | 0x80 | 0x08000000)  # LAYERED|TRANSPARENT|TOOLWINDOW|NOACTIVATE
+    if prev and user32.GetForegroundWindow() == hwnd:
+        user32.SetForegroundWindow(prev)    # Tk took focus anyway: hand it straight back (allowed,
+    root.update()                           # since this process holds the foreground right now)
     user32.SetWindowDisplayAffinity(hwnd, 0x11)                      # WDA_EXCLUDEFROMCAPTURE
 
     # Click-through, except while Ctrl is held: then it can be dragged with the mouse.
@@ -600,11 +617,14 @@ def overlay():
         if STATS["last_run"]:
             lines.append(f"Last run {_hms(STATS['last_run'])}")
         lines += [f"XP       +{STATS['xp']:,}  ({STATS['xp'] / hours:,.0f}/h)",
-                  f"Cash     +{STATS['mm']:,}  ({STATS['mm'] / hours:,.0f}/h)"]
+                  f"Cash     +{STATS['mm']:,}  ({STATS['mm'] / hours:,.0f}/h)",
+                  f"Candy    +{STATS['candy']:,}  ({STATS['candy'] / hours:,.0f}/h)"]
         if _home.get("level"):
             lines.append(f"Level    {_home['level']}")
         if STATS.get("next"):
             lines.append(f"Next     {STATS['next']}")
+        if STATS.get("afk"):
+            lines.append("AFK mode")
         lines.append(STATS["status"])
         label.config(text="\n".join(lines))
         root.after(1000, tick)
@@ -722,24 +742,31 @@ def expert_page():
 MAP_NAME = "map"     # the farm's map, for the stats box (nav_to sets it)
 
 
-def nav_to(map_name, difficulty_btn, mode_btn, final=None):
-    """Home -> Play -> Expert -> the map's page (stepped by the dots) -> map -> difficulty -> mode."""
-    global MAP_NAME
-    MAP_NAME = map_name
-    STATS["status"] = f"loading {map_name}"
+def press(x, y):
+    """A slow, careful click for the home-screen buttons, which ignore a quick one now and then:
+    slide onto the button from just off it, then hold the press longer."""
+    move(x - 58, y - 45)
+    time.sleep(0.15)
+    move(x, y)
+    time.sleep(0.1)
+    if not in_front():
+        return
+    user32.SetCursorPos(*scr(x, y))     # what clicks these buttons reliably by hand (clk.py)
+    time.sleep(0.15)
+    for flags in (0x0002, 0x0004):  # LEFTDOWN, LEFTUP
+        i = INPUT(type=0)
+        i.u.mi = MOUSEINPUT(0, 0, 0, flags, 0, None)
+        _send(i)
+        time.sleep(0.15)
+
+
+def expert_open(map_name):
+    """Home -> Play -> Expert -> the map's page. Back to the map's tile, or None."""
     page, tile = EXPERT_MAPS[map_name]
     for _ in range(5):                  # Play sometimes ignores a click: wiggle onto it, press longer, retry
         if not in_front():
-            return
-        move(900, 900)
-        time.sleep(0.15)
-        move(958, 945)
-        time.sleep(0.25)
-        for flags in (0x0002, 0x0004):  # LEFTDOWN, LEFTUP
-            i = INPUT(type=0)
-            i.u.mi = MOUSEINPUT(0, 0, 0, flags, 0, None)
-            _send(i)
-            time.sleep(0.15)
+            return None
+        press(958, 945)
         if wait_for(MAP_SELECT, 2.5):
             break
         print("nav: Play didn't open the maps, clicking again")
@@ -756,6 +783,118 @@ def nav_to(map_name, difficulty_btn, mode_btn, final=None):
         time.sleep(1.2)
     else:
         return print(f"nav: could not reach Expert page {page}")
+    return tile
+
+
+BONUS = bool(os.environ.get("BTD6_BONUS"))      # set by `watchdog.py bonus`
+BONUS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bonus_map.txt")
+EVENT_BTN = (1840, 175)         # the pumpkin on the home screen
+EVENT_PLAY_BTN = (1810, 960)
+BONUS_TILE = (535, 655)         # 4th tile of the event's map list: always an Expert map
+BONUS_TITLE = (380, 505, 700, 550)
+
+
+def _norm(name):
+    return re.sub(r"[^A-Z]", "", name.upper())
+
+
+def bonus_name(im):
+    """The 4th tile's title. The OCR is flaky on this font, so read it several ways: an exact
+    hit on any read wins, else the closest name to any read (difflib, 0.75 or better)."""
+    import difflib
+    reads = []
+    for box in (BONUS_TITLE, (420, 500, 660, 550)):
+        c = im.crop(tuple(round(v * W / 1920) if i % 2 == 0 else round(v * H / 1080)
+                          for i, v in enumerate(box)))
+        for v in _gray(c) + [c, c.resize((c.width * 2, c.height * 2)), ImageOps.invert(c.convert("L"))]:
+            got = _norm(_ocr(v))
+            if not got:
+                continue
+            for name in EXPERT_MAPS:
+                if _norm(name) in got:
+                    return name
+            reads.append(got)
+    best, score = None, 0.75
+    for got in reads:
+        for name in EXPERT_MAPS:
+            r = difflib.SequenceMatcher(None, _norm(name), got).ratio()
+            if r >= score:
+                best, score = name, r
+    return best
+
+
+def bonus_open(map_name):
+    """Home -> pumpkin -> Play. If the bonus Expert map is this farm's map, True (its tile is
+    clicked next); if it's another map, note it and exit so the watchdog starts that farm."""
+    for _ in range(4):
+        press(*EVENT_BTN)
+        if wait_for(EVENT, 3):
+            break
+    else:
+        print("bonus: event screen did not come up")
+        return False
+    press(*EVENT_PLAY_BTN)
+    name = None
+    for _ in range(6):
+        wait(1)
+        name = bonus_name(grab())
+        if name:
+            break
+    if name is None:
+        print("bonus: could not read the bonus map, going the normal way")
+        click(78, 55)
+        wait(2)
+        click(*EVENT_BACK_BTN)
+        wait(2)
+        return "expert"
+    if name == map_name:
+        print(f"bonus map: {name}")
+        return True
+    print(f"bonus map is {name}, not {map_name}: switching farms")
+    with open(BONUS_FILE, "w", encoding="utf-8") as f:
+        f.write(name)
+    click(78, 55)               # back to the event screen, then home
+    wait(2)
+    click(*EVENT_BACK_BTN)
+    wait(2)
+    save_state(False)
+    sys.stdout.flush()
+    os._exit(4)
+
+
+# Collection Event candies per win (user's numbers): Deflation 3, Easy Standard 13, Impoppable 54
+CANDY = {(1280, 450): 3, (1280, 740): 54}
+MODE_BTN = {"btn": None}        # the mode the farm picks, set by nav_to
+
+
+def candy_per_win():
+    btn = MODE_BTN["btn"]
+    if btn is None:             # rejoined a game without navigating: peek at the farm's nav
+        consts = getattr(getattr(nav, "__code__", None), "co_consts", ())
+        btn = next((c for c in consts if c in CANDY), None)
+    return CANDY.get(btn, 13)
+
+
+def nav_to(map_name, difficulty_btn, mode_btn, final=None):
+    """Home -> Play -> Expert -> the map's page (stepped by the dots) -> map -> difficulty -> mode."""
+    global MAP_NAME
+    if not in_front():                  # tabbed out: wait, don't run the menus blind
+        wait(1)
+        return
+    MAP_NAME = map_name
+    MODE_BTN["btn"] = tuple(mode_btn)
+    STATS["status"] = f"loading {map_name}"
+    if BONUS:                           # the Collection Event's bonus map instead of the Expert list
+        got = bonus_open(map_name)
+        if not got:
+            return
+        tile = BONUS_TILE if got is True else expert_open(map_name)
+        if tile is None:
+            return
+    else:
+        tile = expert_open(map_name)
+        if tile is None:
+            return
     final = final or DEFLATION_POPUP        # Standard mode goes straight into the game: IN_GAME
     for pos, screen in ((tile, DIFFICULTY), (difficulty_btn, MODE), (mode_btn, final)):
         for _ in range(2):
@@ -866,6 +1005,7 @@ def farm():
                 games += 1
                 print(f"win #{games}")
                 STATS["wins"] += 1
+                STATS["candy"] += candy_per_win()
                 if STATS["run_start"]:
                     STATS["last_run"] = time.time() - STATS["run_start"]
             STATS["progress"] = time.time()
@@ -976,7 +1116,14 @@ def farm_guarded():
 def hotkeys():
     """Stop keys in their own thread, polled fast with the 'pressed since last poll' bit,
     so a quick tap is never missed, even if the farm thread is busy or dead."""
+    afk_was = False
     while True:
+        afk_down = any(user32.GetAsyncKeyState(k) & 0x8000 for k in AFK_KEYS)
+        if afk_down and not afk_was:
+            STATS["afk"] = not STATS.get("afk")
+            print("AFK mode " + ("on: tabs back into BTD6 by itself" if STATS["afk"] else "off"))
+            sys.stdout.flush()
+        afk_was = afk_down
         if any(user32.GetAsyncKeyState(k) & 0x8001 for k in STOP_KEYS):
             STATS["stopped"] = True
             save_state(False)

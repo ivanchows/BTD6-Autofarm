@@ -240,8 +240,16 @@ def selected_is(pos):
         return True
     im = F.grab()
     dx = panel_side(im) or 0
-    title = F._ocr(im.crop((40 + dx, 55, 420 + dx, 105)).resize((760, 100))).upper()
-    return any(t in title for t in want)
+    c = im.crop((40 + dx, 55, 420 + dx, 105))
+    # one read can garble the title ("NINJA MONKEY" -> "NUUATAONKEY" on a right-side panel):
+    # try a few ways, letters only, and take any hit
+    for v in (lambda: c.resize((760, 100)),
+              lambda: c.convert("L").point(lambda p: 255 if p > 200 else 0),
+              lambda: F._gray(c)[0]):
+        title = "".join(ch for ch in F._ocr(v()).upper() if "A" <= ch <= "Z")
+        if any(t in title for t in want):
+            return True
+    return False
 
 
 def P(key, pos, path=(0, 0, 0)):

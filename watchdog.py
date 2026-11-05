@@ -20,10 +20,12 @@ STATE_FILE = os.path.join(HERE, "state.json")
 FARM_LOG = os.path.join(HERE, "farm.log")
 LOG = os.path.join(HERE, "watchdog.log")
 import keys
-STOP_KEYS = keys.load("stop")    # keys.json, plus Numpad 0 / Insert / F8
+STOP_KEYS = keys.load("stop")    # settings.json, plus Numpad 0 / Insert / F8
 HEARTBEAT_LIMIT = 120
 PROGRESS_LIMIT = 30 * 60
-SCRIPT = sys.argv[1] if len(sys.argv) > 1 else "infernal_easy.py"   # or any map script
+ARGS = [a for a in sys.argv[1:] if a.lower() != "afk"]
+AFK = len(ARGS) < len(sys.argv) - 1     # `watchdog.py <map> afk`: tab back into BTD6 by itself
+SCRIPT = ARGS[0] if ARGS else "infernal_easy.py"   # or any map script, or "bonus"
 MAX_IMPOP_LOSSES = None   # user: stay on Impoppable (set a number to fall back to Deflation)
 IMPOP_WIN_DEADLINE = None      # user: no time-based switch either
 
@@ -51,8 +53,32 @@ def stop_pressed():
     return any(user32.GetAsyncKeyState(k) & 0x8001 for k in STOP_KEYS)
 
 
+# `watchdog.py bonus`: play whichever Expert map has the Collection Event's bonus rewards.
+# The farm reads the bonus map off the event screen; if it isn't its own map, it writes the
+# name to bonus_map.txt and exits, and the next start picks that map's farm.
+BONUS_SCRIPTS = {
+    "Infernal": "infernal_easy.py", "Flooded Valley": "flooded_easy.py",
+    "Sanctuary": "sanctuary_deflation.py", "Ravine": "ravine_deflation.py",
+    "Quad": "quad_easy.py", "Workshop": "workshop_easy.py", "Dark Dungeons": "dark_dungeons_easy.py",
+    "Bloody Puddles": "bloody_puddles_easy.py", "Tricky Tracks": "tricky_tracks_easy.py",
+    "#Ouch": "ouch_easy.py", "Dark Castle": "dark_castle_impop.py",
+    "Muddy Puddles": "muddy_puddles_impop.py", "Glacial Trail": "glacial_trail_impop.py",
+}
+BONUS = SCRIPT.lower() == "bonus"
+
+
+def bonus_script():
+    try:
+        with open(os.path.join(HERE, "bonus_map.txt"), encoding="utf-8") as f:
+            return BONUS_SCRIPTS.get(f.read().strip(), "quad_easy.py")
+    except OSError:
+        return "quad_easy.py"           # any farm: it checks the event and switches if needed
+
+
 def start_farm(extra=()):
     st = state() or {}
+    if BONUS:
+        globals()["SCRIPT"] = bonus_script()
     path = os.path.join(HERE, "maps", os.path.basename(SCRIPT))     # map scripts live in maps/
     if not os.path.exists(path):
         path = os.path.join(HERE, SCRIPT)
@@ -62,7 +88,7 @@ def start_farm(extra=()):
         args.append("--running")        # towers are already down in this game
     log("starting farm " + " ".join(args[3:]))
     out = open(FARM_LOG, "a", encoding="utf-8")
-    env = dict(os.environ, PYTHONUNBUFFERED="1")
+    env = dict(os.environ, PYTHONUNBUFFERED="1", **({"BTD6_BONUS": "1"} if BONUS else {}), **({"BTD6_AFK": "1"} if AFK else {}))
     return subprocess.Popen(args, cwd=HERE, stdout=out, stderr=subprocess.STDOUT, env=env,
                             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
 
@@ -75,7 +101,7 @@ WATCH_START = time.time()
 
 
 def main():
-    log("watchdog up")
+    log("watchdog up" + (" (AFK mode: tabs back into BTD6)" if AFK else ""))
     try:                                # a stop from the last session must not end this one
         st = state() or {}
         st.setdefault("stats", {}).pop("stopped", None)
