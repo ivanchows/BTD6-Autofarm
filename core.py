@@ -728,8 +728,22 @@ def nav_to(map_name, difficulty_btn, mode_btn, final=None):
     MAP_NAME = map_name
     STATS["status"] = f"loading {map_name}"
     page, tile = EXPERT_MAPS[map_name]
-    click(958, 945)
-    if not wait_for(MAP_SELECT, 6):
+    for _ in range(5):                  # Play sometimes ignores a click: wiggle onto it, press longer, retry
+        if not in_front():
+            return
+        move(900, 900)
+        time.sleep(0.15)
+        move(958, 945)
+        time.sleep(0.25)
+        for flags in (0x0002, 0x0004):  # LEFTDOWN, LEFTUP
+            i = INPUT(type=0)
+            i.u.mi = MOUSEINPUT(0, 0, 0, flags, 0, None)
+            _send(i)
+            time.sleep(0.15)
+        if wait_for(MAP_SELECT, 2.5):
+            break
+        print("nav: Play didn't open the maps, clicking again")
+    else:
         return print("nav: map select did not come up")
     time.sleep(0.5)
     click(1335, 975)                    # Expert

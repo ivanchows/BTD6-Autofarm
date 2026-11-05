@@ -7,7 +7,7 @@ Plays Bloons TD 6 for you while you're away.
 ## Setup (once)
 
 1. Click **Download** above and unzip it.
-2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/).
+2. Double-click **Install.bat** (it installs [uv](https://docs.astral.sh/uv/), which runs the farm).
 3. In BTD6, set the game to **1920x1080** and **English**.
 4. Keep the **default keybinds**, but set these 3 yourself (they start blank):
 
