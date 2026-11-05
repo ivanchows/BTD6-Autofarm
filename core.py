@@ -786,6 +786,47 @@ def expert_open(map_name):
     return tile
 
 
+# --- prices (Impoppable), shared by every farm: prices.json -----------------------------------
+# {"Ice Monkey": {"place": 480, "top": [tier 1, tier 2, ...], "mid": [...], "bot": [...]}, ...}
+PRICES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prices.json")
+_PRICES = {}
+
+
+def _prices():
+    if not _PRICES:
+        try:
+            _PRICES.update(json.load(open(PRICES_FILE, encoding="utf-8")))
+        except (OSError, ValueError):
+            pass
+    return _PRICES
+
+
+def price(tower, path=None, tier=None):
+    """price("Ice Monkey") to place it; price("Ice Monkey", "bot", 3) for Cryo Cannon.
+    None if it isn't in prices.json."""
+    t = _prices().get(tower) or {}
+    if path is None:
+        return t.get("place")
+    row = t.get(path) or []
+    return row[tier - 1] if 0 < tier <= len(row) and row[tier - 1] else None
+
+
+def set_price(tower, path, tier, v):
+    """Save a price (path None = placing it) to prices.json."""
+    t = _prices().setdefault(tower, {})
+    if path is None:
+        t["place"] = int(v)
+    else:
+        row = t.setdefault(path, [])
+        row.extend([None] * (tier - len(row)))
+        row[tier - 1] = int(v)
+    try:
+        with open(PRICES_FILE, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(_PRICES, f, indent=1)
+    except OSError:
+        pass
+
+
 BONUS = bool(os.environ.get("BTD6_BONUS"))      # set by `watchdog.py bonus`
 BONUS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bonus_map.txt")
 EVENT_BTN = (1840, 175)         # the pumpkin on the home screen

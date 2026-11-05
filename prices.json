@@ -1,0 +1,64 @@
+{
+ "_note": "Impoppable prices, read off the game (2026-11-05). place = what the tower costs to put down; top/mid/bot = each path's tier 1, 2, 3... upgrade price. Placement prices for Dart, Ninja, Spike, Mortar and Silas come from the Bloons wiki, not the game.",
+ "Dart Monkey": {
+  "place": 240
+ },
+ "Ninja Monkey": {
+  "place": 480,
+  "top": [
+   420,
+   420
+  ]
+ },
+ "Ice Monkey": {
+  "place": 480,
+  "top": [
+   180,
+   420
+  ],
+  "mid": [
+   240,
+   360,
+   3300,
+   5700,
+   21420
+  ],
+  "bot": [
+   180,
+   240,
+   2280,
+   3300,
+   30600
+  ]
+ },
+ "Spike Factory": {
+  "place": 1200,
+  "top": [
+   960,
+   720
+  ],
+  "bot": [
+   180,
+   480,
+   1560,
+   4320,
+   36000
+  ]
+ },
+ "Mortar Monkey": {
+  "place": 685,
+  "top": [
+   360,
+   600
+  ],
+  "mid": [
+   480,
+   600,
+   1080,
+   7200
+  ]
+ },
+ "Silas": {
+  "place": 1020
+ }
+}

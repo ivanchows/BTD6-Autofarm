@@ -73,6 +73,10 @@ for _op in D.PRE + [op for ops in I.STEPS.values() for op in ops]:
 _select, _try_op = I.select, I.try_op
 
 
+def select_point(pos):
+    return ICE2_CLICK if I.xy(pos) == ICE2 else pos
+
+
 def select(pos):
     return _select(ICE2_CLICK if I.xy(pos) == ICE2 else pos)
 
@@ -110,6 +114,22 @@ def _key(op):
 def try_op(op):
     """'mortar': open its panel, press Set Target, click the aim point under Ice 1."""
     if op[0] in ("tier", "place") and price_of(op) is None:
+        v0 = None
+        if op[0] == "tier":
+            # read the price off the panel BEFORE buying: the cash drop alone came out low
+            # (pops pay out while it buys: Ice 1 2-0-1 was saved as $95)
+            select(op[2][0])
+            F.wait(0.15)
+            if I.panel_open(F.grab()) and I.selected_is(op[2][0]):
+                cur = I.tiers()
+                if cur:
+                    SEEN[_key(op)] = list(cur)
+                v0 = _read_price(op[2][1])
+                red, cash = _price_red(op[2][1]), I.read_cash()
+                if v0 and cash is not None and red is not None and red == (v0 > cash)                         and (cur is None or cur[op[2][1]] == op[2][2] - 1):
+                    _learn(op, v0, "panel")
+                    if v0 > cash:
+                        return False    # can't afford it: don't press, the cash gate waits
         cash0 = I.read_cash()
         before = SEEN.get(_key(op))
         done = (_try_op if op[0] == "place" else _tier)(op)
@@ -121,8 +141,11 @@ def try_op(op):
         bought = (op[0] == "place" and done and I.FAILS.get(op[3], 0) == 0) or (
             op[0] == "tier" and before is not None and after is not None
             and before[op[2][1]] == op[2][2] - 1 and after[op[2][1]] == op[2][2])
-        if bought and cash0 is not None and cash1 is not None and cash0 - cash1 >= 30:
-            _learn(op, round((cash0 - cash1) / 5) * 5, "paid")
+        drop = cash0 - cash1 if cash0 is not None and cash1 is not None else None
+        if bought and v0 and drop is not None and v0 <= cash0 and v0 >= drop * 0.8:
+            _learn(op, v0, "panel")     # the panel price, checked against what it cost
+        elif bought and drop is not None and drop >= 30:
+            _learn(op, round(drop * 1.1 / 5) * 5, "paid")    # pops pay out meanwhile: a bit up
         elif not done and op[0] == "tier" and I.SEL["pos"] is not None:
             v = _read_price(op[2][1])
             red = _price_red(op[2][1])
@@ -133,6 +156,16 @@ def try_op(op):
     if op[0] == "tier":
         done = _tier(op)
         _note_tiers(op)
+        if not done and I.SEL["pos"] is not None and _price_red(op[2][1]):
+            # cash was at the saved price yet it's red: the saved price is too low. Take the
+            # panel's, or anything above the cash now, so it doesn't click again and again
+            v, cash = _read_price(op[2][1]), I.read_cash()
+            k = _pkey(op)
+            if v and cash is not None and v > cash:
+                F.set_price(*k, v)
+            elif cash is not None:
+                F.set_price(*k, max(F.price(*k) or 0, cash + 100))
+            print(f"price: {' '.join(map(str, k))} was too low, now ${F.price(*k)}")
         return done
     if op[0] != "mortar":
         return _try_op(op)
@@ -190,14 +223,22 @@ def _save_progress():
 
 def remaining():
     """Every step of the build not finished yet, in order (the hero is always down by then)."""
-    return [op for op in D.PRE + list(I.STEPS[0])
-            if op[3] not in DONE and not (op[0] == "place" and op[2][0] == "u")]
+    # a placement counts as done once any step on that tower is: the Dart and Ninja (set up
+    # before the first save) were re-placed 3 refused clicks each, a whole round apiece
+    started = {_key(op) for op in D.PRE + list(I.STEPS[0]) if op[3] in DONE}
+    return [op for op in list(I.STEPS[0])
+            if op[3] not in DONE and not (op[0] == "place" and (op[2][0] == "u" or _key(op) in started))]
 
 
 _try_op_g = try_op
 
 
 def try_op(op):
+    # The cash gate lives here too: dark_castle's run_queue runs several steps per call, so a
+    # step behind a finished one skipped the gate in run_queue (Perma-Spike clicked at ~$5k)
+    price = must_wait(op) if op[0] in ("tier", "place") else None
+    if price and not can_afford(price):
+        return False
     done = _try_op_g(op)
     if done and op[3] not in DONE:
         DONE.add(op[3])
@@ -213,40 +254,36 @@ _run_queue = I.run_queue
 # Every price is learned once (the cash drop on a buy, or the panel's price when a buy fails)
 # and saved, so a step just watches the cash and clicks only once there is enough. A step
 # whose price isn't known yet is tried at most every UNKNOWN_EVERY seconds.
-PRICES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "glacial_prices.json")
-try:
-    PRICES = json.load(open(PRICES_FILE, encoding="utf-8"))
-except (OSError, ValueError):
-    PRICES = {}
+# Prices live in the shared prices.json (core.price), by tower type, so every farm can use them.
 UNKNOWN_EVERY = 6
 LAST_BLIND = {"t": 0}
+TOWER = {repr(DART): "Dart Monkey", repr(NINJA): "Ninja Monkey", repr(SILAS): "Silas",
+         repr(ICE1): "Ice Monkey", repr(ICE2): "Ice Monkey", repr(ICE3): "Ice Monkey",
+         repr(SPIKE): "Spike Factory", repr(MORTAR): "Mortar Monkey"}
 
 
 def _pkey(op):
+    """(tower, path, tier) for core.price; path and tier None for placing it."""
     if op[0] == "place":
-        return f"place {op[2][0]}"
+        return (TOWER[_key(op)], None, None)
     if op[0] == "tier":
-        return f"{D.NICE.get(_key(op), _key(op))} {'top mid bot'.split()[op[2][1]]} {op[2][2]}"
+        return (TOWER[_key(op)], "top mid bot".split()[op[2][1]], op[2][2])
     return None
 
 
 def _learn(op, v, how):
     k = _pkey(op)
-    if k and v and k not in PRICES:
-        PRICES[k] = int(v)
-        print(f"price: {k} = ${v} ({how})")
-        try:
-            with open(PRICES_FILE, "w", encoding="utf-8", newline="\n") as f:
-                json.dump(PRICES, f, indent=1, sort_keys=True)
-        except OSError:
-            pass
+    if k and v and F.price(*k) is None:
+        F.set_price(*k, v)
+        print(f"price: {' '.join(str(x) for x in k if x)} = ${v} ({how})")
 
 
 SEEN = {}           # tower key -> its tiers as last read off its panel this run
 
 
 def _note_tiers(op):
-    if op[0] == "tier" and I.SEL["pos"] is not None and repr(I.SEL["pos"]) == _key(op):
+    if op[0] == "tier" and I.SEL["pos"] is not None and (
+            repr(I.SEL["pos"]) == _key(op) or I.xy(I.SEL["pos"]) == I.xy(select_point(op[2][0]))):
         cur = I.tiers()
         if cur:
             SEEN[_key(op)] = list(cur)
@@ -254,7 +291,18 @@ def _note_tiers(op):
 
 def price_of(op):
     k = _pkey(op)
-    return PRICES.get(k) if k else None
+    return F.price(*k) if k else None
+
+
+def can_afford(price):
+    """Two cash reads in a row, both at the price and close to each other: one bad read (the
+    coin icon taken for a digit) made Perma-Spike's $36,000 look affordable at ~$5,000."""
+    a = I.read_cash()
+    if a is None or a < price:
+        return False
+    F.wait(0.1)
+    b = I.read_cash()
+    return b is not None and b >= price and abs(a - b) <= max(200, a * 0.05)
 
 
 def must_wait(op):
@@ -266,9 +314,14 @@ def must_wait(op):
         return None
     if op[0] == "tier":
         cur = SEEN.get(_key(op))
-        if cur is None or cur[op[2][1]] >= op[2][2]:
-            return None
+        if cur is not None and cur[op[2][1]] >= op[2][2]:
+            return None         # already there: go ahead, it passes at once
+    # (unseen tiers wait too: Ice 2's panel opens via another click point, so its tiers were
+    # never noted and it clicked 4x a second at a $9,700 price)
     return price
+
+
+LAST_CASH = {"v": None}
 
 
 def _read_price(p):
@@ -279,15 +332,21 @@ def _read_price(p):
         return None
     y0 = (522, 672, 822)[p]
     c = im.crop((*I._px(270 + dx, y0 - 8), *I._px(400 + dx, y0 + 40)))
+    LAST_CASH["v"] = I.read_cash()
     t = F._ocr(c.resize((c.width * 3, c.height * 3))).replace(" ", "").replace(".", ",").upper()
     t = t.replace("O", "0")
     m = F.re.search(r"\$(\d[\d,]{1,6})", t) or F.re.search(r"(\d[\d,]{1,6})", t)
     if not m:
         return None
-    s = m.group(1)
-    if "$" not in t and "," not in s and len(s) >= 4:
-        s = s[1:]               # '$420' read as '4420': the $ came out as a digit
-    v = int(s.replace(",", ""))
+    s = m.group(1).replace(",", "")
+    v = int(s)
+    if "$" not in t and len(s) >= 4 and LAST_CASH["v"] is not None:
+        # '$420' can come out '4420' (the $ read as a digit), but '$4,320' can come out
+        # '4320' too. The price's colour settles it: red means above the cash.
+        alt = int(s[1:])
+        red, cash = _price_red(p), LAST_CASH["v"]
+        if red is not None and (red != (v > cash)) and (red == (alt > cash)):
+            v = alt
     return v if 50 <= v <= 200000 else None
 
 
@@ -320,7 +379,7 @@ def frozen(pos, im=None):
     BASE[k] = min(BASE.get(k, 0.3), f)
     hit = f >= max(0.28, BASE[k] + 0.22)
     HITS[k] = HITS.get(k, 0) + 1 if hit else 0
-    return HITS[k] >= 2
+    return HITS[k] >= 3          # ~0.75 s in a row: a snow flicker made 2 reads
 
 
 # A restart mid-game re-queues upgrades but no placements (infernal_impop's round handler), so
@@ -341,12 +400,15 @@ def _ensure_placed(q):
     CHECKED.add(k)
     if any(o[0] == "place" and _key(o) == k for o in q):
         return
+    if any(_key(o) == k and o[3] in DONE for o in D.PRE + list(I.STEPS[0])):
+        return                  # saved progress says it's down (the panel check misses some)
     if not I.has_tower(I.G["queue"][0][2][0]):
         print(f"{D.NICE.get(k, k)} isn't standing: placing it first")
         q.insert(0, PLACE_OP[k])
 
 
 RESUMED = {"done": False}
+FROZEN_CHECK = False
 
 
 def run_queue():
@@ -362,7 +424,9 @@ def run_queue():
         print(f"glacial: carrying on, {len(I.G['queue'])} steps left")
     q = I.G["queue"]
     now = time.time()
-    if q and now - I.G["last_try"] >= D.RETRY and q[0][0] in ("tier", "target", "mortar"):
+    # The on-screen frozen check is OFF: it read a thawed Spike as frozen (snow next to it
+    # scores almost as high as the ice block), and skipping it broke the build order.
+    if FROZEN_CHECK and q and now - I.G["last_try"] >= D.RETRY and q[0][0] in ("tier", "target", "mortar"):
         im = F.grab()
         for op in q[:6]:            # look, don't click: mark frozen towers before trying them
             if op[0] in ("tier", "target", "mortar") and frozen(op[2][0], im):
@@ -383,14 +447,14 @@ def run_queue():
         _ensure_placed(q)
         price = must_wait(q[0])
         if price:
-            cash = I.read_cash()
-            if cash is not None and cash < price:
+            if not can_afford(price):
                 I.G["last_try"] = now
-                F.STATS["next"] = f"{D.next_text()} (${cash}/${price})"
+                F.STATS["next"] = D.next_text()
                 return
-        elif price_of(q[0]) or (q[0][0] == "tier" and (
-                SEEN.get(_key(q[0])) is None or SEEN[_key(q[0])][q[0][2][1]] >= q[0][2][2])):
-            pass                    # tiers not seen yet, or already there: one look, no wait
+        elif price_of(q[0]) or (q[0][0] == "tier" and SEEN.get(_key(q[0])) is not None
+                                and SEEN[_key(q[0])][q[0][2][1]] >= q[0][2][2]):
+            pass                    # already there: it passes at once
+        # (a tower whose panel won't confirm used to get "one look" 4x a second: Perma-Spike)
         elif q[0][0] in ("tier", "place") and now - LAST_BLIND["t"] < UNKNOWN_EVERY:
             return                  # price not learned yet: try now and then, not twice a second
         elif q[0][0] in ("tier", "place"):
