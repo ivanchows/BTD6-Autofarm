@@ -32,7 +32,8 @@ I.TOKENS.update(d=("NINJ", "INJA"), t=("ICE",), n=("MORT", "RTAR"), u=("SILAS", 
 
 # One list, bought strictly in order, each step the moment the cash covers it (round numbers
 # stopped fitting once the order changed: Perma-Spike landed on r73, not r68).
-D.PRE = I.P("d", NINJA) + I.T(NINJA, "STRONG")     # no Dart (2026-11-05: does it change the freezes?)
+D.PRE = I.P("q", DART) + I.P("d", NINJA) + I.T(NINJA, "STRONG")
+# (without the Dart: 1 win, then lost r40, r31, r40 overnight 2026-11-05; with it every game passed r40)
 STEPS = {
     0: (I.U(NINJA, top=2)                                         # Ninja 2-0-0
         + I.P("u", SILAS)
@@ -53,7 +54,9 @@ STEPS = {
         + I.U(ICE1, bot=1)                                       # Icicle Impale 2-0-5
         # (no second Icicle Impale: only one of each tier 5 can be on the map)
         + I.U(ICE2, mid=1)                                       # Absolute Zero 2-5-0
-        + I.U(MORTAR, top=2, mid=2)),                            # Mortar 2-4-0
+        + I.U(MORTAR, top=2, mid=2)                              # Mortar 2-4-0
+        # round 100 leaked twice with ~$44k unspent: put it into the Ninja (4-0-0, Bloonjitsu)
+        + I.U(NINJA, top=2)),
 }
 I.STEPS = {max(0, k - 1) if k else 0: v for k, v in STEPS.items()}
 I.DURING = {}
@@ -170,11 +173,7 @@ def try_op(op):
                     print(f"{D.NICE.get(k2, k2)} is frozen (red at ${v} with ${cash}): other towers first")
                 ICED[k2] = time.time()
                 return done
-            if v and cash is not None and v > cash:
-                F.set_price(*k, v)
-            elif cash is not None and v:
-                F.set_price(*k, max(F.price(*k) or 0, cash + 100))
-            print(f"price: {' '.join(map(str, k))} was too low, now ${F.price(*k)}")
+            # (no price edits here any more: upgrades wait by the panel's colour)
         return done
     if op[0] != "mortar":
         return _try_op(op)
@@ -236,7 +235,7 @@ def remaining():
     # a placement counts as done once any step on that tower is: the Dart and Ninja (set up
     # before the first save) were re-placed 3 refused clicks each, a whole round apiece
     started = {_key(op) for op in D.PRE + list(I.STEPS[0]) if op[3] in DONE}
-    return [op for op in list(I.STEPS[0])
+    return [op for op in list(D.PRE) + list(I.STEPS[0])
             if op[3] not in DONE and not (op[0] == "place" and _key(op) in started)]
 
 
@@ -248,7 +247,9 @@ def try_op(op):
     # step behind a finished one skipped the gate in run_queue (Perma-Spike clicked at ~$5k)
     if (I.G.get("round") or 0) < HOLD.get(_key(op), 0):
         return False                # (run_queue takes several steps per call: hold it here too)
-    price = must_wait(op) if op[0] in ("tier", "place") else None
+    if op[0] == "tier" and not tier_ready(op):
+        return False
+    price = must_wait(op) if op[0] == "place" else None
     if price and not can_afford(price):
         return False
     done = _try_op_g(op)
@@ -318,6 +319,29 @@ def can_afford(price):
     if ok and price >= 5000:
         print(f"cash read {a} and {b}: buying the ${price} step")
     return ok
+
+
+def tier_ready(op):
+    """Upgrades wait by the panel, not the cash read (OCR read $21,109 as 211,092 and a bad
+    saved price, $57,000, held the whole queue for 25 rounds). Open the tower's panel once and
+    leave it open; press only when this path's price is white. Red = can't afford it yet, or
+    the tower is frozen: either way, wait without clicking."""
+    pos = op[2][0]
+    if I.SEL["pos"] is None or I.xy(I.SEL["pos"]) != I.xy(select_point(pos)):
+        select(pos)
+        F.wait(0.2)
+        if not I.panel_open(F.grab()) or not I.selected_is(pos):
+            I.deselect()
+            return False
+        cur = I.tiers()
+        if cur:
+            SEEN[_key(op)] = list(cur)
+    cur = SEEN.get(_key(op))
+    if cur is not None and cur[op[2][1]] >= op[2][2]:
+        return True                 # already there: it passes at once
+    # (no "red with the cash in hand = frozen" guess: the cash read said $30,105 at $11,513,
+    #  called a thawed Ice frozen and let the Ninja buy ahead of Absolute Zero)
+    return _price_red(op[2][1]) is False
 
 
 def must_wait(op):
@@ -423,7 +447,10 @@ def _ensure_placed(q):
 
 
 RESUMED = {"done": False}
-HOLD = {repr(SPIKE): 21, repr(MORTAR): 51}     # no steps on these before that round (user)
+HOLD = {repr(MORTAR): 51}     # no steps on these before that round (user)
+# (a Spike hold until r21 lost twice: letting Ice 1 buy ahead lost r40, saving for it lost r31.
+#  The win had none: the Spike goes down around r20 as soon as the cash is there)
+SAVE_FOR = {repr(SPIKE)}          # (letting Ice 1 buy ahead spent the cash: Spike only at r29, lost r40)
 FIRST_FROM = {repr(MORTAR): 51}   # from that round its steps jump the queue (Mortar done ~r61;
                                   # at the back it came at r89-93 and froze for 4 rounds)
 FROZEN_CHECK = False
@@ -462,6 +489,9 @@ def run_queue():
                 I.G["queue"] = q = mine + [op for op in q if _key(op) != k]
     for k, r in HOLD.items():       # a held tower waits for its round: the steps after it go first
         if (I.G.get("round") or 0) < r:
+            if k in SAVE_FOR and q and _key(q[0]) == k:
+                I.G["last_try"] = now
+                return              # ...unless it's saved for: nothing else is bought meanwhile
             iced.add(k)
     if q and _key(q[0]) in iced:
         for i, op in enumerate(q):
@@ -473,7 +503,7 @@ def run_queue():
             I.G["last_try"] = now
             return
         _ensure_placed(q)
-        price = must_wait(q[0])
+        price = must_wait(q[0]) if q[0][0] == "place" else None
         if price:
             if not can_afford(price):
                 I.G["last_try"] = now
