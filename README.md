@@ -59,22 +59,28 @@ It only clicks while BTD6 is on your screen. Tab out and it waits, so you can do
 
 ## Maps
 
-| File | Map | Mode |
-|---|---|---|
-| `infernal_easy.py` | Infernal | Easy, Deflation |
-| `flooded_easy.py` | Flooded Valley | Easy, Deflation |
-| `sanctuary_deflation.py` | Sanctuary | Easy, Deflation |
-| `ravine_deflation.py` | Ravine | Easy, Deflation |
-| `quad_easy.py` | Quad | Easy |
-| `workshop_easy.py` | Workshop | Easy |
-| `dark_dungeons_easy.py` | Dark Dungeons | Easy |
-| `bloody_puddles_easy.py` | Bloody Puddles | Easy |
-| `tricky_tracks_easy.py` | Tricky Tracks | Easy |
-| `ouch_easy.py` | #Ouch | Easy |
-| `infernal_impop.py` | Infernal | Impoppable |
-| `dark_castle_impop.py` | Dark Castle | Impoppable |
-| `muddy_puddles_impop.py` | Muddy Puddles | Impoppable |
-| `glacial_trail_impop.py` | Glacial Trail | Impoppable |
-| `sanctuary_impop.py` | Sanctuary | Impoppable |
+| File | Map | Mode | Hero |
+|---|---|---|---|
+| `infernal_easy.py` | Infernal | Easy, Deflation | none |
+| `flooded_easy.py` | Flooded Valley | Easy, Deflation | none |
+| `sanctuary_deflation.py` | Sanctuary | Easy, Deflation | Obyn |
+| `ravine_deflation.py` | Ravine | Easy, Deflation | Obyn |
+| `quad_easy.py` | Quad | Easy | Etienne |
+| `workshop_easy.py` | Workshop | Easy | Sauda |
+| `dark_dungeons_easy.py` | Dark Dungeons | Easy | Obyn |
+| `bloody_puddles_easy.py` | Bloody Puddles | Easy | none |
+| `tricky_tracks_easy.py` | Tricky Tracks | Easy | Quincy |
+| `ouch_easy.py` | #Ouch | Easy | none |
+| `infernal_impop.py` | Infernal | Impoppable | Benjamin |
+| `dark_castle_impop.py` | Dark Castle | Impoppable | Striker Jones |
+| `muddy_puddles_impop.py` | Muddy Puddles | Impoppable | Psi |
+| `glacial_trail_impop.py` | Glacial Trail | Impoppable | Silas |
+| `sanctuary_impop.py` | Sanctuary | Impoppable | Obyn |
+
+## Heroes you need
+
+Obyn, Etienne, Sauda, Quincy, Striker Jones, Benjamin, Psi, Silas.
+
+The farm picks the right hero by itself. You just need them unlocked.
 
 You need the map, the hero and the upgrades unlocked.

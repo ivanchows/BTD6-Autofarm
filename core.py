@@ -829,7 +829,25 @@ def set_price(tower, path, tier, v):
 
 BONUS = bool(os.environ.get("BTD6_BONUS"))      # set by `watchdog.py bonus`
 BONUS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bonus_map.txt")
-EVENT_BTN = (1840, 175)         # the pumpkin on the home screen
+EVENT_BTN = (1840, 325)         # the pumpkin on the home screen (moved down a slot when the
+                                # Odyssey button came in, 2026-11-05: found by colour now)
+
+
+def event_btn(im=None):
+    """Where the pumpkin is in the home screen's right icon column: the 70 px stretch with the
+    most pumpkin orange (the icons above it shift as events come and go)."""
+    im = im or grab()
+    rows = []
+    for y in range(100, 600, 10):
+        n = 0
+        for x in range(1800, 1880, 2):
+            r, g, b = im.getpixel((round(x * W / 1920), round(y * H / 1080)))[:3]
+            n += r > 220 and 90 < g < 170 and b < 70
+        rows.append((y, n))
+    best = max(range(len(rows) - 6), key=lambda i: sum(n for _, n in rows[i:i + 7]))
+    if sum(n for _, n in rows[best:best + 7]) < 40:
+        return EVENT_BTN
+    return (1840, rows[best + 3][0])
 EVENT_PLAY_BTN = (1810, 960)
 BONUS_TILE = (535, 655)         # 4th tile of the event's map list: always an Expert map
 BONUS_TITLE = (380, 505, 700, 550)
@@ -867,20 +885,23 @@ def bonus_name(im):
 def bonus_open(map_name):
     """Home -> pumpkin -> Play. If the bonus Expert map is this farm's map, True (its tile is
     clicked next); if it's another map, note it and exit so the watchdog starts that farm."""
-    for _ in range(4):
-        press(*EVENT_BTN)
-        if wait_for(EVENT, 3):
-            break
-    else:
-        print("bonus: event screen did not come up")
-        return False
-    press(*EVENT_PLAY_BTN)
-    name = None
-    for _ in range(6):
-        wait(1)
-        name = bonus_name(grab())
-        if name:
-            break
+    im = grab()
+    # the farm that switched here left the event's map list open: carry on from it
+    name = None if matches(im, HOME) else bonus_name(im)
+    if name is None:
+        for _ in range(4):
+            press(*event_btn())
+            if wait_for(EVENT, 3):
+                break
+        else:
+            print("bonus: event screen did not come up")
+            return False
+        press(*EVENT_PLAY_BTN)
+        for _ in range(6):
+            wait(1)
+            name = bonus_name(grab())
+            if name:
+                break
     if name is None:
         print("bonus: could not read the bonus map, going the normal way")
         click(78, 55)
@@ -894,10 +915,8 @@ def bonus_open(map_name):
     print(f"bonus map is {name}, not {map_name}: switching farms")
     with open(BONUS_FILE, "w", encoding="utf-8") as f:
         f.write(name)
-    click(78, 55)               # back to the event screen, then home
-    wait(2)
-    click(*EVENT_BACK_BTN)
-    wait(2)
+    # stay on the map list: the next farm picks it up from here (backing out home and coming
+    # back cost ~15 s, and the bonus map changes after every win)
     save_state(False)
     sys.stdout.flush()
     os._exit(4)
@@ -1132,8 +1151,15 @@ def farm():
             known = False
         if known:
             unknown_since, tries = None, 0
+        elif BONUS and unknown_since is None and bonus_name(im):
+            print("on the bonus map list")      # left open by the farm that switched here
+            nav()
         elif unknown_since is None:
             unknown_since = time.time()
+        elif time.time() - unknown_since > UNKNOWN_AFTER and BONUS and bonus_name(im):
+            print("on the bonus map list")      # left open by the farm that switched here
+            nav()
+            unknown_since, tries = None, 0
         elif time.time() - unknown_since > UNKNOWN_AFTER:
             clear_popup(tries)
             tries += 1
