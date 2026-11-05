@@ -23,6 +23,7 @@ Each map script is named `<map>_<mode>.py`. The shared code lives in `core.py` (
 | `tricky_tracks_easy.py` | Tricky Tracks | Easy, Standard (Quincy) |
 | `ouch_easy.py` | #Ouch | Easy, Standard (no hero) |
 | `sanctuary_impop.py` | Sanctuary | Hard, Impoppable (Obyn) |
+| `sanctuary_deflation.py` | Sanctuary | Easy, Deflation (Obyn) |
 
 ## Requirements
 
