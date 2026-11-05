@@ -786,6 +786,64 @@ def expert_open(map_name):
     return tile
 
 
+# --- maps or heroes this player doesn't have: skip them ------------------------------------------
+# A downloaded farm can meet a map or hero the player hasn't unlocked. The farm notes it in
+# skipped_maps.json and exits with code 5: in bonus mode the watchdog plays a map the player has
+# for a game and checks the bonus again; with one map picked it stops and says why. A skip is
+# forgotten after SKIP_FOR seconds, in case it was unlocked meanwhile.
+SKIP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skipped_maps.json")
+SKIP_FOR = 6 * 3600
+NAV_FAILS = {}          # map -> clicks on its tile in a row that didn't open it
+
+
+def skipped():
+    """{map: why} for maps skipped in the last SKIP_FOR seconds."""
+    try:
+        d = json.load(open(SKIP_FILE, encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {m: v["why"] for m, v in d.items() if time.time() - v.get("t", 0) < SKIP_FOR}
+
+
+def skip_map(map_name, why):
+    """Note the map as unplayable and exit (code 5) so the watchdog moves on."""
+    try:
+        d = json.load(open(SKIP_FILE, encoding="utf-8"))
+    except (OSError, ValueError):
+        d = {}
+    d[map_name] = {"why": why, "t": time.time()}
+    with open(SKIP_FILE, "w", encoding="utf-8") as f:
+        json.dump(d, f, indent=1)
+    print(f"skipping {map_name}: {why}")
+    save_state(False)
+    sys.stdout.flush()
+    os._exit(5)
+
+
+HERO_SELECT_BTN = (1110, 615)
+HERO_BTN_BOX = (960, 575, 1260, 660)     # around the green Select under the picked hero
+
+
+def hero_select(name):
+    """In the hero list with the hero's tile clicked: press Select, unless the button there is
+    an Unlock (a locked hero: never press it, it buys with Monkey Money) -> skip this map."""
+    wait(0.5)
+    c = grab().crop(tuple(round(v * W / 1920) if i % 2 == 0 else round(v * H / 1080)
+                          for i, v in enumerate(HERO_BTN_BOX)))
+    t = ""
+    for v in (c, c.resize((c.width * 2, c.height * 2)), ImageOps.invert(c.convert("L"))):
+        t += " " + _ocr(v).upper()
+    # anything like SELECT(ED) = fine; a price or "Unlock" / "Level" with no SELECT = locked
+    looks_select = any(k in t for k in ("SELECT", "ELECT", "SELEC"))
+    if not looks_select and ("UNLOCK" in t or "LEVEL" in t or re.search(r"\d{3}", t)):
+        print(f"hero {name} is locked (button reads {t.strip()!r})")
+        for _ in range(4):      # hero list -> mode -> difficulty -> map list -> Home / event screen
+            click(78, 55)
+            wait(1.5)
+        skip_map(MAP_NAME, f"hero {name} not unlocked")
+    click(*HERO_SELECT_BTN)
+
+
 # --- prices (Impoppable), shared by every farm: prices.json -----------------------------------
 # {"Ice Monkey": {"place": 480, "top": [tier 1, tier 2, ...], "mid": [...], "bot": [...]}, ...}
 PRICES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prices.json")
@@ -909,6 +967,17 @@ def bonus_open(map_name):
         click(*EVENT_BACK_BTN)
         wait(2)
         return "expert"
+    if name in skipped():
+        print(f"bonus map is {name}, which this player can't play ({skipped()[name]}): another map meanwhile")
+        with open(BONUS_FILE, "w", encoding="utf-8") as f:
+            f.write(name)
+        click(78, 55)
+        wait(2)
+        click(*EVENT_BACK_BTN)
+        wait(2)
+        save_state(False)
+        sys.stdout.flush()
+        os._exit(5)
     if name == map_name:
         print(f"bonus map: {name}")
         return True
@@ -964,15 +1033,36 @@ def nav_to(map_name, difficulty_btn, mode_btn, final=None):
             if wait_for(screen, 20 if screen is final else 6):
                 break
         else:
+            if pos == tile:             # the map's own tile didn't open it: locked map?
+                NAV_FAILS[map_name] = NAV_FAILS.get(map_name, 0) + 1
+                if NAV_FAILS[map_name] >= 3:
+                    click(78, 55)
+                    skip_map(map_name, "map not unlocked (its tile never opened it)")
             return print("nav: screen did not come up, retrying from wherever we are")
+        if pos == tile:
+            NAV_FAILS.pop(map_name, None)
         time.sleep(0.3)
         if screen is MODE:
             on_mode_screen()
+    NAV_DONE["t"] = time.time()     # a game opened from the menu is new, whatever round it reads
     if final is DEFLATION_POPUP:
+        click(*OK_BTN)
+    for _ in range(3):              # a second popup can follow ("Monkey Teams" on that day's map)
+        if not wait_for(DEFLATION_POPUP, 1.5):
+            break
         click(*OK_BTN)
 
 
+NAV_DONE = {"t": 0}
+
+
 def nav():
+    # Infernal, Easy, Deflation through nav_to (finds the Expert page, the bonus route, and skips
+    # the map if it's locked). The old fixed clicks below are kept unused.
+    return nav_to("Infernal", (625, 420), (1280, 450))
+
+
+def _old_nav():
     for pos, screen in NAV:
         click(*pos)
         if not wait_for(screen, 20 if screen is DEFLATION_POPUP else 6):
@@ -1068,12 +1158,17 @@ def farm():
                 STATS["candy"] += candy_per_win()
                 if STATS["run_start"]:
                     STATS["last_run"] = time.time() - STATS["run_start"]
+                if os.environ.get("BTD6_ONE_GAME"):
+                    save_state(False)
+                    sys.stdout.flush()
+                    os._exit(6)         # a stand-in map's game is done: check the bonus map again
             STATS["progress"] = time.time()
             STATS["status"] = "won, heading home"
             click(*NEXT_BTN)
             wait(0.8)
         elif matches(im, RESTART_CONFIRM):
             click(*RESTART_CONFIRM_BTN)
+            NAV_DONE["t"] = time.time()     # a restarted game is new too
             wait(1)
             running = False
         elif matches(im, DEFEAT_PAID):
@@ -1132,6 +1227,12 @@ def farm():
             read_home(im)
             STATS["status"] = f"loading {MAP_NAME}"
             nav()
+        elif matches(im, DEFLATION_POPUP):
+            # a popup with one green OK over the game (Deflation rules, "Monkey Teams" on that
+            # day's map): it blocked every placement on Flooded Valley, 2026-11-05
+            print("popup over the game: OK")
+            click(*OK_BTN)
+            wait(1)
         elif matches(im, IN_GAME):
             if not running:
                 STATS["status"] = "placing towers"

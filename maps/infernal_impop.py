@@ -565,7 +565,7 @@ def ensure_ben():
     F.wait(2)
     F.click(*BEN_TILE)
     F.wait(1)
-    F.click(*SELECT_BTN)
+    F.hero_select("Benjamin")     # (skips the map if Benjamin is locked)
     F.wait(1)
     F.click(78, 55)                     # back to the mode screen
     F.wait(2)

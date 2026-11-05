@@ -175,6 +175,7 @@ def next_text():
 
 RETRY = 0.5         # seconds between tries of a step that is still waiting
 TRIES = {}          # step label -> failed tries
+REJOIN_HERO = set()     # labels of hero placements a rejoin re-queued
 MAX_TRIES = {"target": 4, "aim": 4}     # a buy waits for cash, so only these are capped
 
 
@@ -206,7 +207,9 @@ def run_queue():
             print(op[3])
             continue
         TRIES[op[3]] = TRIES.get(op[3], 0) + 1
-        if TRIES[op[3]] >= MAX_TRIES.get(op[0], 10 ** 9):
+        # a hero step added by a rejoin: the hero may already stand and not show it, so 6 tries
+        cap = 6 if op[3] in REJOIN_HERO else MAX_TRIES.get(op[0], 10 ** 9)
+        if TRIES[op[3]] >= cap:
             print(f"!! gave up on '{op[3]}' after {TRIES[op[3]]} tries, moving on")
             G["queue"].pop(0)
             TRIES.pop(op[3], None)
@@ -228,7 +231,10 @@ def setup():
         if r:
             break
         F.wait(0.3)
-    if r and r > 7:            # Impoppable starts on round 6
+    # Impoppable starts on round 6. A game just opened from the menu is new whatever the
+    # counter reads: Tricky Tracks' "1/40" read as 11, the farm "rejoined", skipped Quincy and
+    # lost round 27 (twice, 2026-11-05)
+    if r and r > 7 and time.time() - F.NAV_DONE["t"] > 60:
         I.FAILS.clear()
         I.SEL["pos"] = None
         if set(I.STEPS) - {0}:
@@ -243,7 +249,11 @@ def setup():
             # place on a spot that's taken is refused 3x and counted as standing).
             print(f"dark castle: rejoined on round {r}, re-checking the build")
             I.G.update(round=r, done={0}, during=set(), pending=None, fresh=True,
-                       queue=[op for op in PRE if op[0] != "place"] + list(I.STEPS[0]))
+                       # the hero too: a rejoin without it left Tricky Tracks with no Quincy
+                       # (its hero step counts a standing hero as done)
+                       queue=[op for op in PRE if op[0] != "place" or op[2][0] == I.HERO_KEY]
+                       + list(I.STEPS[0]))
+            REJOIN_HERO.update(op[3] for op in PRE if op[0] == "place" and op[2][0] == I.HERO_KEY)
         return
     I.G.update(round=0, done={0}, during=set(), pending=None, fresh=True, queue=list(PRE))
     I.FAILS.clear()
@@ -274,7 +284,7 @@ def pick_striker():
     F.wait(2)
     F.click(*STRIKER_TILE)
     F.wait(1)
-    F.click(*I.SELECT_BTN)
+    F.hero_select("Striker Jones")     # (skips the map if Striker Jones is locked)
     F.wait(1)
     F.click(78, 55)             # back to the mode screen
     F.wait(2)

@@ -44,7 +44,7 @@ def pick_etienne():
     F.wait(2)
     F.click(*ETIENNE_TILE)
     F.wait(1)
-    F.click(*I.SELECT_BTN)
+    F.hero_select("Etienne")     # (skips the map if Etienne is locked)
     F.wait(1)
     F.click(78, 55)             # back to the mode screen
     F.wait(2)

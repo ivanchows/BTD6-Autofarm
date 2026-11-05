@@ -66,6 +66,36 @@ BONUS_SCRIPTS = {
 }
 BONUS = SCRIPT.lower() == "bonus"
 
+# A map or hero the player hasn't unlocked: the farm notes it in skipped_maps.json and exits 5.
+# Bonus mode then plays one game on a map the player has (no-hero maps first) and checks the
+# bonus again (the farm exits 6 after that win); one picked map stops with the reason.
+SKIP_FILE = os.path.join(HERE, "skipped_maps.json")
+SKIP_FOR = 6 * 3600
+STAND_INS = ["infernal_easy.py", "flooded_easy.py", "bloody_puddles_easy.py", "ouch_easy.py",
+             "quad_easy.py", "workshop_easy.py", "dark_dungeons_easy.py", "tricky_tracks_easy.py",
+             "ravine_deflation.py", "sanctuary_deflation.py"]
+SCRIPT_MAP = {v: k for k, v in BONUS_SCRIPTS.items()}
+SCRIPT_MAP.update({"ravine_deflation.py": "Ravine", "sanctuary_deflation.py": "Sanctuary",
+                   "sanctuary_impop.py": "Sanctuary", "infernal_impop.py": "Infernal"})
+STAND_IN = {"script": None}
+
+
+def skipped():
+    try:
+        d = json.load(open(SKIP_FILE, encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {m: v["why"] for m, v in d.items() if time.time() - v.get("t", 0) < SKIP_FOR}
+
+
+def stand_in():
+    """The first stand-in map the player can play, or None."""
+    bad = skipped()
+    for s in STAND_INS:
+        if SCRIPT_MAP.get(s) not in bad:
+            return s
+    return None
+
 
 def bonus_script():
     try:
@@ -78,7 +108,7 @@ def bonus_script():
 def start_farm(extra=()):
     st = state() or {}
     if BONUS:
-        globals()["SCRIPT"] = bonus_script()
+        globals()["SCRIPT"] = STAND_IN["script"] or bonus_script()
     path = os.path.join(HERE, "maps", os.path.basename(SCRIPT))     # map scripts live in maps/
     if not os.path.exists(path):
         path = os.path.join(HERE, SCRIPT)
@@ -88,7 +118,11 @@ def start_farm(extra=()):
         args.append("--running")        # towers are already down in this game
     log("starting farm " + " ".join(args[3:]))
     out = open(FARM_LOG, "a", encoding="utf-8")
-    env = dict(os.environ, PYTHONUNBUFFERED="1", **({"BTD6_BONUS": "1"} if BONUS else {}), **({"BTD6_AFK": "1"} if AFK else {}))
+    env = dict(os.environ, PYTHONUNBUFFERED="1", **({"BTD6_AFK": "1"} if AFK else {}))
+    if BONUS and STAND_IN["script"]:
+        env["BTD6_ONE_GAME"] = "1"      # one game on a stand-in map, then back to the bonus
+    elif BONUS:
+        env["BTD6_BONUS"] = "1"
     return subprocess.Popen(args, cwd=HERE, stdout=out, stderr=subprocess.STDOUT, env=env,
                             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
 
@@ -128,7 +162,23 @@ def main():
             if (state() or {}).get("stats", {}).get("stopped"):
                 log("farm stopped by hotkey, watchdog exiting")
                 return
-            log(f"farm exited ({code}), restarting")
+            if code == 5:               # map or hero not unlocked
+                why = skipped()
+                name = SCRIPT_MAP.get(os.path.basename(SCRIPT), SCRIPT)
+                if not BONUS:
+                    log(f"can't play {name}: {why.get(name, 'not unlocked')}. Unlock it, or pick another map.")
+                    return
+                STAND_IN["script"] = stand_in()
+                if STAND_IN["script"] is None:
+                    log("none of the maps can be played (maps or heroes not unlocked): stopping")
+                    return
+                log(f"{name} skipped ({why.get(name, 'not unlocked')}): one game on "
+                    f"{SCRIPT_MAP.get(STAND_IN['script'], STAND_IN['script'])} meanwhile")
+            elif code == 6:             # the stand-in game is won: check the bonus map again
+                STAND_IN["script"] = None
+                log("stand-in game done, back to the bonus map")
+            else:
+                log(f"farm exited ({code}), restarting")
         else:
             if time.time() - started < 90:      # give it time to boot / relaunch the game
                 continue

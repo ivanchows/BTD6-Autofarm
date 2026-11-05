@@ -361,7 +361,7 @@ def pick_obyn():
     F.wait(2)
     F.click(*OBYN_TILE)
     F.wait(1)
-    F.click(*I.SELECT_BTN)
+    F.hero_select("Obyn")     # (skips the map if Obyn is locked)
     F.wait(1)
     F.click(78, 55)             # back to the mode screen
     F.wait(2)

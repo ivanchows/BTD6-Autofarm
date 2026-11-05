@@ -109,7 +109,7 @@ def pick_sauda():
     F.wait(2)
     F.click(*SAUDA_TILE)
     F.wait(1)
-    F.click(*I.SELECT_BTN)
+    F.hero_select("Sauda")     # (skips the map if Sauda is locked)
     F.wait(1)
     F.click(78, 55)             # back to the mode screen
     F.wait(2)

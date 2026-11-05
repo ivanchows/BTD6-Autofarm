@@ -61,6 +61,8 @@ STEPS = {
 I.STEPS = {max(0, k - 1) if k else 0: v for k, v in STEPS.items()}
 I.DURING = {}
 D.RETRY = 0.25
+D.GIVE_UP = 10 ** 9     # never drop a step: a frozen Spike's panel didn't open, and Perma-Spike
+                        # was given up for the game after 18 clicks
 D.MAX_TRIES["mortar"] = 4
 D.MAULER_SPOTS = []
 D.DONE_AFTER = 95
@@ -77,12 +79,19 @@ for _op in D.PRE + [op for ops in I.STEPS.values() for op in ops]:
 _select, _try_op = I.select, I.try_op
 
 
+SPIKE_CLICK = (1472, 772)   # its lower right: Absolute Zero's big sprite covers the placing point
+
+
 def select_point(pos):
-    return ICE2_CLICK if I.xy(pos) == ICE2 else pos
+    if I.xy(pos) == ICE2:
+        return ICE2_CLICK
+    if I.xy(pos) == SPIKE:
+        return SPIKE_CLICK
+    return pos
 
 
 def select(pos):
-    return _select(ICE2_CLICK if I.xy(pos) == ICE2 else pos)
+    return _select(select_point(pos))
 
 
 # --- iced towers ------------------------------------------------------------------------------
@@ -332,6 +341,11 @@ def tier_ready(op):
         F.wait(0.2)
         if not I.panel_open(F.grab()) or not I.selected_is(pos):
             I.deselect()
+            # a frozen tower won't open its panel: let the others go first, come back to it
+            k = _key(op)
+            if k not in ICED or time.time() - ICED[k] > ICED_FOR:
+                print(f"{D.NICE.get(k, k)}: panel won't open (frozen?), other towers first")
+            ICED[k] = time.time()
             return False
         cur = I.tiers()
         if cur:
@@ -341,7 +355,43 @@ def tier_ready(op):
         return True                 # already there: it passes at once
     # (no "red with the cash in hand = frozen" guess: the cash read said $30,105 at $11,513,
     #  called a thawed Ice frozen and let the Ninja buy ahead of Absolute Zero)
-    return _price_red(op[2][1]) is False
+    red = _price_red(op[2][1])
+    if red is False:
+        WAIT_SINCE.pop(op[3], None)
+        return True
+    if red is None:
+        # no panel open: it closed (the game shuts it now and then). The farm still thought
+        # it was open and waited on nothing from r58 to r82. Open it again next time
+        I.SEL["pos"] = None
+        return False
+    # Backstop: Perma-Spike sat "red" from r58 to r82 with $59k in the bank (lost r82). After a
+    # minute on one step, if the cash read clearly covers it, try it anyway every 20 s (the
+    # game refuses what we can't pay) and keep a picture of the price box to see why.
+    now = time.time()
+    since = WAIT_SINCE.setdefault(op[3], now)
+    price = price_of(op)
+    if now - since > 60 and now - LAST_FORCE["t"] > 20 and price and can_afford(int(price * 1.1)):
+        LAST_FORCE["t"] = now
+        print(f"{op[3]}: still red after {int(now - since)} s with the cash there: trying it anyway")
+        try:
+            im = F.grab()
+            dx = I.panel_side(im) or 0
+            y0 = (522, 672, 822)[op[2][1]]
+            im.crop((*I._px(200 + dx, y0 - 60), *I._px(420 + dx, y0 + 50))).save(
+                os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                             "losses", f"red_{int(now)}.png"))
+        except Exception:
+            pass
+        return True
+    return False
+
+
+WAIT_SINCE = {}
+LAST_FORCE = {"t": 0}
+
+
+def _unused():
+    return False
 
 
 def must_wait(op):
@@ -530,7 +580,7 @@ def pick_silas():
     F.wait(2)
     F.click(*SILAS_TILE)
     F.wait(1)
-    F.click(*I.SELECT_BTN)
+    F.hero_select("Silas")     # (skips the map if Silas is locked)
     F.wait(1)
     F.click(78, 55)             # back to the mode screen
     F.wait(2)

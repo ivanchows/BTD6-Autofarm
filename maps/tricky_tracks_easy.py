@@ -85,7 +85,7 @@ def pick_quincy():
     F.wait(2)
     F.click(*QUINCY_TILE)
     F.wait(1)
-    F.click(*I.SELECT_BTN)
+    F.hero_select("Quincy")     # (skips the map if Quincy is locked)
     F.wait(1)
     F.click(78, 55)             # back to the mode screen
     F.wait(2)

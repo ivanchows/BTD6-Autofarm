@@ -78,4 +78,7 @@ Obyn, Etienne, Sauda, Quincy, Striker Jones, Benjamin, Psi, Silas.
 
 The farm picks the right hero by itself. You just need them unlocked.
 
+Missing a map or a hero? The farm skips that map. In bonus mode it plays a map you do have
+until the bonus moves on. It tries a skipped map again after 6 hours.
+
 You need the map, the hero and the upgrades unlocked.
