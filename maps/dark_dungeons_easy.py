@@ -7,6 +7,8 @@
 machinery (checked placing/upgrading, in-order queue, loop guards, overlay Next line).
 Stop: Numpad 0 (or F8). Pause: Numpad 1.
 """
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # core.py is one folder up
 import core as F
 import infernal_impop as I
 import dark_castle_impop as D

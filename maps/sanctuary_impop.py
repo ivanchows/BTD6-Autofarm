@@ -23,6 +23,8 @@ import time
 import cv2
 import numpy as np
 
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # core.py is one folder up
 import core as F
 import infernal_impop as I
 import dark_castle_impop as D

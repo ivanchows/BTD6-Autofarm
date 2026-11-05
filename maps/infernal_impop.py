@@ -13,6 +13,8 @@ Stop: Numpad 0 (or F8).
 import sys
 import time
 
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # core.py is one folder up
 import core as F
 
 SKY_KEY, BOOM_KEY, SNIPER_KEY, VILLAGE_KEY, ALCH_KEY, HERO_KEY = "p", "w", "z", "k", "f", "u"
@@ -523,7 +525,7 @@ def queue_due(r):
 def on_defeat(im):
     """Log every loss for debugging: round, what was still queued, and a screenshot."""
     stamp = time.strftime("%Y%m%d_%H%M%S")
-    folder = F.os.path.join(F.os.path.dirname(F.os.path.abspath(__file__)), "losses")
+    folder = F.os.path.join(F.os.path.dirname(F.os.path.dirname(F.os.path.abspath(__file__))), "losses")   # BTD6Farm/losses
     F.os.makedirs(folder, exist_ok=True)
     im.save(F.os.path.join(folder, f"{stamp}_round{G['round']}.png"))
     pending = "; ".join(op[3] for op in G["queue"]) or "nothing"

@@ -10,6 +10,8 @@ Stop: Numpad 0 (or F8). Pause: Numpad 1.
 """
 import time
 
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # core.py is one folder up
 import sanctuary_impop as S      # temple tracking, Fixed spots, Obyn pick
 import core as F
 import infernal_impop as I

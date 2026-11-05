@@ -6,7 +6,7 @@ AFK farms for Bloons TD 6. They read the screen and click like a player would.
 
 Click **Download**, unzip it anywhere, install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run a farm (see [Running](#running)).
 
-Each map script is named `<map>_<mode>.py`. The shared code lives in `core.py` (menus, screens, OCR, stats box) and `infernal_impop.py` (checked placing and upgrading, which the other maps reuse).
+Each map script lives in `maps/` and is named `<map>_<mode>.py`. Shared code: `core.py` (menus, screens, OCR, stats box) and `maps/infernal_impop.py` (checked placing and upgrading, which the other maps reuse). `watchdog.py` finds a map by its file name alone.
 
 | Script | Map | Mode |
 |---|---|---|

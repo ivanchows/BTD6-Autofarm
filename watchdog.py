@@ -51,7 +51,10 @@ def stop_pressed():
 
 def start_farm(extra=()):
     st = state() or {}
-    args = ["uv", "run", "-q", os.path.join(HERE, SCRIPT), *extra]
+    path = os.path.join(HERE, "maps", os.path.basename(SCRIPT))     # map scripts live in maps/
+    if not os.path.exists(path):
+        path = os.path.join(HERE, SCRIPT)
+    args = ["uv", "run", "-q", path, *extra]
     fresh = time.time() - st.get("heartbeat", 0) < HEARTBEAT_LIMIT
     if fresh and st.get("running") and user32.FindWindowW(None, "BloonsTD6"):
         args.append("--running")        # towers are already down in this game
