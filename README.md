@@ -1,6 +1,6 @@
 # BTD6-Autofarm
 
-Plays Bloons TD 6 for you while you're away.
+Farms candies for you while you're away.
 
 [![Download](https://img.shields.io/badge/Download-ZIP-2ea44f?style=for-the-badge&logo=github)](https://github.com/ivanchows/BTD6-Autofarm/archive/refs/heads/main.zip)
 
