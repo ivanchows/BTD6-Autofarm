@@ -3,7 +3,7 @@
 Farms candies for you while you're away.
 Combinations of easy and impoppable maps.
 
-[![Download](https://img.shields.io/badge/Download-ZIP-2ea44f?style=for-the-badge&logo=github)](https://github.com/ivanchows/BTD6-Autofarm/archive/refs/heads/main.zip)
+<a href="https://github.com/ivanchows/BTD6-Autofarm/archive/refs/heads/main.zip"><img src="https://img.shields.io/badge/Download-ZIP-2ea44f?style=for-the-badge&logo=github" alt="Download" height="110"></a>
 
 ## Setup (once)
 
