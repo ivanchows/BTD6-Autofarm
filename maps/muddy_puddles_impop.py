@@ -44,7 +44,7 @@ I.STEPS = {
     13: I.P("x", SUB2, (1, 0, 0)),                               # Longer Range
     15: I.U(SUB2, top=1),                                        # Advanced Intel
     18: I.U(SUB2, bot=1),                                        # Twin Guns
-    22: I.U(SUB2, bot=1) + I.U(SNIPER, top=1, mid=1),            # Airburst Darts; FMJ + Night Vision
+    22: I.U(SUB2, bot=1) + I.U(SNIPER, mid=1) + I.U(SNIPER, top=1),   # Airburst Darts; Night Vision (0-1-0) first, then FMJ (1-1-0) (user, 2026-11-05)
     27: I.P("u", PSI) + [("tabs", None, (PSI, 3), "psi -> strong (3 tabs)")],
     30: I.U(SUB2, bot=1),                                        # Triple Guns
     35: I.U(SUB2, bot=1) + I.U(DES_MID, mid=1) + I.P("f", ALCH, (2, 0, 0)),   # APD, Eagle Eye, Acid

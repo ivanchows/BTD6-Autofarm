@@ -341,10 +341,62 @@ def has_tower(pos):
     return False
 
 
+KEY_NAME = {SKY_KEY: "Skywarden", BOOM_KEY: "Boomerang", SNIPER_KEY: "Sniper", VILLAGE_KEY: "Village",
+            ALCH_KEY: "Alchemist", HERO_KEY: "Benjamin"}
+
+
+def _plan():
+    """Every step in the order it is bought: by round, a round's DURING steps first."""
+    return [op for x in sorted(set(DURING) | set(STEPS)) for op in DURING.get(x, []) + STEPS.get(x, [])]
+
+
+def describe(op):
+    """A step in words for the info box and the app: 'Sniper 2 0-2-2', 'place Village'."""
+    plan = _plan()
+    names, count = {}, {}
+    for o in plan:              # name each spot by its tower; a second one of a kind gets a number
+        if o[0] == "place" and repr(o[2][1]) not in names:
+            base = KEY_NAME.get(o[2][0], "tower")
+            count[base] = count.get(base, 0) + 1
+            names[repr(o[2][1])] = base if count[base] == 1 else f"{base} {count[base]}"
+    pos = op[2][1] if op[0] == "place" else op[2][0]
+    name = names.get(repr(pos), "tower")
+    if op[0] == "place":
+        return f"place {name}"
+    if op[0] == "tier":
+        want = [0, 0, 0]        # the tiers this step reaches, from the build order
+        for o in plan:
+            if o[0] == "tier" and repr(o[2][0]) == repr(pos):
+                want[o[2][1]] = max(want[o[2][1]], o[2][2])
+                if o is op or o[3] == op[3]:
+                    break
+        return f"{name} {'-'.join(map(str, want))}"
+    if op[0] == "target":
+        return f"{name} -> {op[2][1].title()}"
+    return op[3]
+
+
+def next_text():
+    """The head of the queue, or the next round's first step ('r42: place Village'), or 'done'."""
+    if G["queue"]:
+        return describe(G["queue"][0])
+    later = sorted(x for x in set(STEPS) | set(DURING)
+                   if (x in STEPS and x not in G["done"]) or (x in DURING and x not in G["during"]))
+    if not later:
+        return "done"
+    x = later[0]
+    first = (DURING.get(x, []) if x not in G["during"] else []) + (STEPS.get(x, []) if x not in G["done"] else [])
+    return f"r{x}: {describe(first[0])}" if first else "done"
+
+
 def run_queue():
     """Try the first few queued steps, not just the head: a purchase still waiting for cash
     (Ben at $1,295) must not hold back cheaper steps queued behind it. Safe because every
     step checks its own tower and target before acting."""
+    try:
+        F.STATS["next"] = next_text()
+    except Exception:
+        pass
     if not G["queue"] or time.time() - G["last_try"] < 0.5:
         return
     G["last_try"] = time.time()
@@ -577,6 +629,8 @@ F.setup = setup
 F.ingame = ingame
 if IMPOP_BTN:
     F.NAV = F.NAV[:4] + [(HARD_BTN, F.MODE), (IMPOP_BTN, F.DEFLATION_POPUP)]
+    # core.nav() is Easy Deflation now (nav_to): Impoppable needs its own route
+    F.nav = lambda: F.nav_to("Infernal", HARD_BTN, IMPOP_BTN)     # Hard, Impoppable
 
 if __name__ == "__main__":
     F.main()

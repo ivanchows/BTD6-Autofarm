@@ -57,7 +57,7 @@ def stop_pressed():
 # The farm reads the bonus map off the event screen; if it isn't its own map, it writes the
 # name to bonus_map.txt and exits, and the next start picks that map's farm.
 BONUS_SCRIPTS = {
-    "Infernal": "infernal_easy.py", "Flooded Valley": "flooded_easy.py",
+    "Infernal": "infernal_impop.py", "Flooded Valley": "flooded_easy.py",     # user: Infernal on Impoppable only
     "Sanctuary": "sanctuary_deflation.py", "Ravine": "ravine_deflation.py",
     "Quad": "quad_easy.py", "Workshop": "workshop_easy.py", "Dark Dungeons": "dark_dungeons_easy.py",
     "Bloody Puddles": "bloody_puddles_easy.py", "Tricky Tracks": "tricky_tracks_easy.py",
@@ -71,11 +71,11 @@ BONUS = SCRIPT.lower() == "bonus"
 # bonus again (the farm exits 6 after that win); one picked map stops with the reason.
 SKIP_FILE = os.path.join(HERE, "skipped_maps.json")
 SKIP_FOR = 6 * 3600
-STAND_INS = ["infernal_easy.py", "flooded_easy.py", "bloody_puddles_easy.py", "ouch_easy.py",
+STAND_INS = ["flooded_easy.py", "bloody_puddles_easy.py", "ouch_easy.py", "infernal_impop.py",
              "quad_easy.py", "workshop_easy.py", "dark_dungeons_easy.py", "tricky_tracks_easy.py",
              "ravine_deflation.py", "sanctuary_deflation.py"]
 SCRIPT_MAP = {v: k for k, v in BONUS_SCRIPTS.items()}
-SCRIPT_MAP.update({"ravine_deflation.py": "Ravine", "sanctuary_deflation.py": "Sanctuary",
+SCRIPT_MAP.update({"infernal_easy.py": "Infernal", "ravine_deflation.py": "Ravine", "sanctuary_deflation.py": "Sanctuary",
                    "sanctuary_impop.py": "Sanctuary", "infernal_impop.py": "Infernal"})
 STAND_IN = {"script": None}
 

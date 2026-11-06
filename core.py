@@ -450,7 +450,9 @@ def load_state():
         if time.time() - st.get("heartbeat", 0) < 7200 and not st["stats"].get("stopped"):
             STATS.update({k: st["stats"][k] for k in ("start", "wins", "losses", "xp", "mm", "last_run") if k in st["stats"]})
             STATS["candy"] = st["stats"].get("candy", 0)
-            STATS["afk"] = st["stats"].get("afk", STATS["afk"])   # kept across map switches
+            # kept across map switches, but a run started with AFK (watchdog ... afk) is always AFK:
+            # the old state used to switch an overnight run's AFK back off
+            STATS["afk"] = STATS["afk"] or st["stats"].get("afk", False)
             _home.update(st.get("home", {}))
     except Exception:
         pass
