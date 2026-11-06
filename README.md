@@ -11,7 +11,7 @@ Combinations of easy and impoppable maps.
 2. Double-click **Install.bat** (it installs [uv](https://docs.astral.sh/uv/), which runs the farm). The app opens when it's done.
    Windows may say it protected your PC (the app isn't signed): click **More info**, then **Run anyway**.
    If it says it couldn't install uv, check your internet or antivirus and run it again.
-3. In BTD6, set the game to **1920x1080** and **English**.
+3. In BTD6, set the game to **1920x1080**. Any game language works: in a new language the first game is a little slower while the farm learns its words.
 4. Keep the **default keybinds**, but set these 3 yourself (they start blank):
 
 | Monkey | Key |

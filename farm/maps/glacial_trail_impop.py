@@ -422,7 +422,7 @@ def _read_price(p):
     y0 = (522, 672, 822)[p]
     c = im.crop((*I._px(270 + dx, y0 - 8), *I._px(400 + dx, y0 + 40)))
     LAST_CASH["v"] = I.read_cash()
-    t = F._ocr(c.resize((c.width * 3, c.height * 3))).replace(" ", "").replace(".", ",").upper()
+    t = F.num_text(F._ocr(c.resize((c.width * 3, c.height * 3)))).upper()
     t = t.replace("O", "0")
     m = F.re.search(r"\$(\d[\d,]{1,6})", t) or F.re.search(r"(\d[\d,]{1,6})", t)
     if not m:

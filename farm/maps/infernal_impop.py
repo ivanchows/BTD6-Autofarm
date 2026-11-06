@@ -16,6 +16,7 @@ import time
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # core.py is one folder up
 import core as F
+import pics
 
 SKY_KEY, BOOM_KEY, SNIPER_KEY, VILLAGE_KEY, ALCH_KEY, HERO_KEY = "p", "w", "z", "k", "f", "u"
 TARGET_KEY = "\t"   # next targeting priority: First -> Last -> Close -> Strong -> First
@@ -73,7 +74,7 @@ def read_cash():
     # Whole thousands groups only, and 4+ digits with no comma is not trusted.
     got = []
     for v in (c, c.resize((c.width * 2, c.height * 2))):
-        t = F._ocr(v).replace(" ", "").replace(".", ",").upper().replace("O", "0")
+        t = F.num_text(F._ocr(v)).upper().replace("O", "0")
         m = F.re.search(r"\$(\d{1,3}(?:,\d{3})*)", t)
         if m and ("," in m.group(1) or len(F.re.match(r"\$(\d*)", t[m.start():]).group(1)) <= 3):
             got.append(int(m.group(1).replace(",", "")))
@@ -236,14 +237,40 @@ TOKENS = {"p": ("SKY", "WARD"), "w": ("BOOM", "RANG"), "z": ("MPER", "NIPE", "SN
           "k": ("VILL",), "f": ("ALC", "HEM"), "u": ("BEN", "JAM")}
 
 
+def key_of(pos):
+    """The hotkey of the tower that belongs at pos (None if the map names it some other way)."""
+    want = NAME.get(repr(pos))
+    return next((k for k, v in TOKENS.items() if v == want), None)
+
+
+def title_mask(im, dx):
+    # the name's own rows: above them the map shows through, below them the pop-count badge
+    # (its number changes as the tower pops, so it would change the picture)
+    return pics.mask(im, (40 + dx, 62, 420 + dx, 95))
+
+
+def side(dx):
+    """Learned words are kept per panel side: a left and a right panel draw them a few pixels apart."""
+    return "R" if dx else "L"
+
+
 def selected_is(pos):
     """Is the open panel the tower that belongs at pos? Click areas overlap (the boomer
-    spot also hits the skywarden), so never trust the click alone."""
+    spot also hits the skywarden), so never trust the click alone.
+    Any language: the title is compared as a picture with the titles learned so far
+    (pics.py). English titles are also read as words, as before; a title in another
+    language that was never seen is learned as this tower, unless it's another tower's."""
     want = NAME.get(repr(pos))
     if not want:
         return True
     im = F.grab()
     dx = panel_side(im) or 0
+    key = key_of(pos)
+    m = title_mask(im, dx)
+    if key is not None:
+        seen = pics.which("name" + side(dx), m)
+        if seen is not None:
+            return seen == key
     c = im.crop((40 + dx, 55, 420 + dx, 105))
     # one read can garble the title ("NINJA MONKEY" -> "NUUATAONKEY" on a right-side panel):
     # try a few ways, letters only, and take any hit
@@ -252,7 +279,13 @@ def selected_is(pos):
               lambda: F._gray(c)[0]):
         title = "".join(ch for ch in F._ocr(v()).upper() if "A" <= ch <= "Z")
         if any(t in title for t in want):
+            if key is not None:
+                pics.put("name" + side(dx), key, m)
             return True
+    if key is not None and pics.get("name" + side(dx), key) is None and pics.ink(m) >= 30:
+        pics.put("name" + side(dx), key, m)
+        print(f"learned how tower {key!r} is written in this game language")
+        return True
     return False
 
 
@@ -285,6 +318,46 @@ def target_label():
     if dx is None:
         return ""
     return F._ocr(im.crop((120 + dx, 350, 330 + dx, 400)).resize((420, 100))).upper()
+
+
+# Targeting in any language. A tower placed this run starts on its cycle's first mode, so the
+# mode is known by counting Tabs; each label seen that way is learned as a picture (pics.py),
+# which then tells the mode of any tower, even after a restart.
+CYCLES = {"j": ("NORMAL", "CLOSE", "FAR", "SMART")}       # Spike Factory
+CYCLE = ("FIRST", "LAST", "CLOSE", "STRONG")              # everything else that targets
+TMODE = {}          # repr(pos) -> index in its cycle, for towers placed this run
+
+
+def target_mask(im, dx):
+    return pics.mask(im, (120 + dx, 350, 330 + dx, 400))
+
+
+def label_now():
+    im = F.grab()
+    dx = panel_side(im)
+    return None if dx is None else target_mask(im, dx)
+
+
+def current_mode(pos):
+    """The open panel's targeting mode, or None if it can't be told."""
+    im = F.grab()
+    dx = panel_side(im)
+    if dx is None:
+        return None
+    m = target_mask(im, dx)
+    cyc = CYCLES.get(key_of(pos), CYCLE)
+    words = target_label()
+    mode = next((w for w in cyc if w in words), None)       # English words
+    if mode is None:
+        mode = pics.which("target" + side(dx), m)            # a learned label
+    if mode is None and repr(pos) in TMODE:
+        mode = cyc[TMODE[repr(pos)] % len(cyc)]               # counted from a fresh tower
+    if mode is not None:
+        if mode in cyc:
+            TMODE[repr(pos)] = cyc.index(mode)
+        if pics.get("target" + side(dx), mode) is None:
+            pics.put("target" + side(dx), mode, m)
+    return mode
 
 
 # "Round X" steps: queued the moment round X is on screen, each bought as soon as it is
@@ -436,8 +509,23 @@ def try_op(op):
                 if mode in target_label():
                     done = True
                     break
+                now = current_mode(pos)
+                if now == mode:
+                    done = True
+                    break
+                if now is None:
+                    # a game language whose labels aren't learned yet, on a tower this run
+                    # didn't place: Tabbing blind would leave it on any mode, so leave it be
+                    break
+                before = label_now()
                 F.key(TARGET_KEY)
                 F.wait(0.25)
+                after = label_now()
+                # count a Tab only if the label really changed: a press before the panel
+                # was up would put the count one off for good
+                d = pics.diff(before, after) if before is not None and after is not None else None
+                if repr(pos) in TMODE and d is not None and d >= pics.SAME:
+                    TMODE[repr(pos)] += 1
         else:
             deselect()
     elif kind == "tier":
@@ -475,6 +563,7 @@ def try_op(op):
         result = try_place(key, pos)
         if result == "placed":
             done = True
+            TMODE[repr(pos)] = 0        # a new tower: on its cycle's first targeting mode
         elif result == "nocash" and key == HERO_KEY and has_tower(pos):
             done = True         # a hero places once: with it standing, its key shows no ghost
             print("already standing:", label)
@@ -501,6 +590,15 @@ def read_round(im):
     for v in (c, c.resize((c.width * 2, c.height * 2))):
         t = F._ocr(v).upper().replace(" ", "").replace("O", "0").replace("I", "1").replace("L", "1")
         m = F.re.search(r"(\d+)/(?:1\d\d|[4-9]\d)\b", t)     # x/100, or x/40 on Easy Standard
+        if m:
+            return int(m.group(1))
+    # Another game language: its word for ROUND throws the read off, and the "100" garbles. Read
+    # the digits alone, black on white, and take the number before the slash (the caller only
+    # takes a round after two matching reads, within 15 of the last)
+    d = im.crop((round(x0 * F.W / 1920), round(28 * F.H / 1080), round((x0 + 190) * F.W / 1920),
+                 round(80 * F.H / 1080))).convert("L").point(lambda p: 0 if p > 200 else 255)
+    for v in (d, d.resize((d.width * 3, d.height * 3))):
+        m = F.re.search(r"(\d{1,3})/", F._ocr(F.ImageOps.expand(v, 30, fill=255)).replace(" ", ""))
         if m:
             return int(m.group(1))
     return None

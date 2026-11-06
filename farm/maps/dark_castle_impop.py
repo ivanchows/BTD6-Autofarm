@@ -14,6 +14,7 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # core.py is one folder up
 import core as F
 import infernal_impop as I
+import pics
 
 # Placement points, tested in Sandbox 2026-11-03. A tall tower is drawn 25-40 px above the
 # point it was placed at, so these sit below where each tower appears on screen.
@@ -91,8 +92,12 @@ def selected_is(pos):
         F.wait(0.3)
         im = F.grab()
         dx = I.panel_side(im) or 0
-        title = F._ocr(im.crop((40 + dx, 55, 420 + dx, 105)).resize((760, 100))).upper()
-        ok = not any(t in title for t in ("STRIK", "JONE"))
+        seen = pics.which("name" + I.side(dx), I.title_mask(im, dx))     # any language: Striker's learned title
+        if seen is not None:
+            ok = seen != "u"
+        else:
+            title = F._ocr(im.crop((40 + dx, 55, 420 + dx, 105)).resize((760, 100))).upper()
+            ok = not any(t in title for t in ("STRIK", "JONE"))
     else:
         ok = _selected_is(pos)
     if ok:

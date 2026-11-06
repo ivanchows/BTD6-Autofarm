@@ -25,7 +25,7 @@ NO_WINDOW = 0x08000000
 KEEP_FILES = ["state.json", "state.json.tmp", "overlay_pos.json", "bonus_map.txt", "settings.json", "gui.json",
               "skipped_maps.json", "glacial_progress.json", "glacial_prices.json", "*.log", "*.log.old",
               ".version", "Autofarm.exe", "Autofarm.exe.old"]
-KEEP_DIRS = {"losses", "featured", "__pycache__", ".venv"}
+KEEP_DIRS = {"losses", "featured", "learned", "__pycache__", ".venv"}
 # Left over from older versions
 STALE = ["farm/updater.ps1"]
 # The old layout (everything at the top): the player's files move into farm\, then the old code goes

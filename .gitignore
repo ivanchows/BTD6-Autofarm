@@ -14,3 +14,4 @@ gui_cmd.txt
 *.log.old
 .version
 Autofarm.exe.old
+farm/learned/

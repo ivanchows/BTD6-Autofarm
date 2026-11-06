@@ -25,6 +25,8 @@ import threading
 import time
 import tkinter as tk
 
+import mapsig
+import pics
 import mss
 from PIL import Image, ImageOps
 
@@ -56,10 +58,11 @@ IN_GAME = [(1685, 62, (54, 207, 0), 40)]                       # green UPGRADES 
 DEFLATION_POPUP = [(900, 740, (114, 232, 0), 40), (1020, 780, (59, 214, 0), 40),
                    (520, 480, (98, 151, 216), 40)]             # "Start at round 31" + OK
 VICTORY_STATS = [(880, 880, (116, 232, 3), 40), (1040, 935, (53, 211, 0), 40),
-                 (960, 150, (255, 235, 0), 40)]                # stats card + Next
+                 (680, 140, (247, 117, 38), 40), (1240, 140, (247, 117, 38), 40)]   # Next + the banner's ends, not its word
 VICTORY_MENU = [(1200, 820, (113, 232, 0), 40), (560, 460, (102, 153, 217), 40)]  # Home/Review/Freeplay
-DEFEAT = [(990, 840, (240, 185, 0), 40), (960, 340, (255, 59, 0), 40), (570, 500, (93, 145, 214), 40)]
-DEFEAT_PAID = [(880, 840, (250, 193, 0), 40), (960, 340, (255, 59, 0), 40)]  # 4 buttons, last = paid Continue
+# yellow Restart + the blue panel (never a pixel on the DEFEAT banner: its word changes with the language)
+DEFEAT = [(990, 840, (240, 185, 0), 40), (570, 500, (93, 145, 214), 40), (1340, 480, (94, 147, 215), 40)]
+DEFEAT_PAID = [(880, 840, (250, 193, 0), 40), (570, 500, (93, 145, 214), 40), (1340, 480, (94, 147, 215), 40)]  # 4 buttons, last = paid Continue
 RESTART_CONFIRM = [(1060, 710, (114, 232, 0), 40), (700, 710, (255, 221, 0), 40), (960, 380, (113, 232, 0), 40)]
 EVENT = [(100, 500, (87, 61, 103), 30), (1700, 800, (86, 60, 102), 30),
          (700, 50, (118, 38, 163), 40)]                        # Halloween collection event
@@ -85,8 +88,8 @@ RESTART_CONFIRM_BTN = (1135, 730)
 MAP_SELECT = [(78, 165, (0, 207, 255), 40)]                    # search button
 EXPERT_PAGE = [(1181, 757, (64, 159, 255), 40)]                # page dot: Tricky Tracks page
 INFERNAL_PAGE = [(1218, 757, (64, 159, 255), 40)]              # page dot: Infernal page
-DIFFICULTY = [(625, 566, (154, 228, 44), 40), (78, 55, (255, 255, 255), 30)]
-MODE = [(960, 45, (0, 0, 0), 30), (640, 590, (255, 255, 255), 30), (78, 55, (255, 255, 255), 30)]
+DIFFICULTY = [(530, 600, (156, 120, 66), 30), (860, 600, (156, 120, 66), 30), (78, 55, (255, 255, 255), 30)]   # the reward plaques' frames, not their words
+MODE = [(1240, 25, (128, 74, 36), 30), (640, 590, (255, 255, 255), 30), (78, 55, (255, 255, 255), 30)]   # title plate, not its text (any language)
 # Home -> Play -> Expert -> next page -> Infernal -> Easy -> Deflation: (click, screen it leads to)
 NAV = [((958, 945), MAP_SELECT), ((1335, 975), EXPERT_PAGE), ((1645, 430), INFERNAL_PAGE),
        ((535, 260), DIFFICULTY), ((625, 420), MODE), ((1280, 450), DEFLATION_POPUP)]
@@ -484,12 +487,18 @@ def _ocr(img):
     return asyncio.run(run())
 
 
+def num_text(t):
+    """OCR text with every language's thousands separator turned into a comma: 1.234 (German),
+    1 234 with a (narrow) no-break space (French), 1'234 (Swiss) all read 1,234."""
+    return re.sub(r"[\s\u00a0\u202f']", "", t).replace(".", ",")
+
+
 def _read(im, box, pattern, prep):
     """OCR a 1920x1080-space box a few ways; first text matching pattern wins."""
     c = im.crop(tuple(round(v * W / 1920) if i % 2 == 0 else round(v * H / 1080)
                       for i, v in enumerate(box)))
     for variant in prep(c):
-        m = re.search(pattern, _ocr(variant).replace(" ", "").replace(".", ","))
+        m = re.search(pattern, num_text(_ocr(variant)))
         if m:
             return [int(g.replace(",", "")) for g in m.groups()]
     return None
@@ -768,6 +777,9 @@ def press(x, y):
 def expert_open(map_name):
     """Home -> Play -> Expert -> the map's page. Back to the map's tile, or None."""
     page, tile = EXPERT_MAPS[map_name]
+    im = grab()
+    if matches(im, HOME):
+        pics.note_home(im)
     for _ in range(5):                  # Play sometimes ignores a click: wiggle onto it, press longer, retry
         if not in_front():
             return None
@@ -945,6 +957,9 @@ def bonus_name(im):
     """The 4th tile's title. The OCR is flaky on this font, so read it several ways: an exact
     hit on any read wins, else the closest name to any read (difflib, 0.75 or better)."""
     import difflib
+    got = mapsig.which(im, BONUS_TILE, EXPERT_MAPS)    # by its picture: any game language
+    if got:
+        return got
     reads = []
     for box in (BONUS_TITLE, (420, 500, 660, 550)):
         c = im.crop(tuple(round(v * W / 1920) if i % 2 == 0 else round(v * H / 1080)
@@ -970,6 +985,8 @@ def bonus_open(map_name):
     """Home -> pumpkin -> Play. If the bonus Expert map is this farm's map, True (its tile is
     clicked next); if it's another map, note it and exit so the watchdog starts that farm."""
     im = grab()
+    if matches(im, HOME):
+        pics.note_home(im)
     # the farm that switched here left the event's map list open: carry on from it
     name = None if matches(im, HOME) else bonus_name(im)
     if name is None:
