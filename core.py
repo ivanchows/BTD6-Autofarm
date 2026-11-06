@@ -869,6 +869,27 @@ def price(tower, path=None, tier=None):
     return row[tier - 1] if 0 < tier <= len(row) and row[tier - 1] else None
 
 
+COSTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tower_costs.json")
+_COSTS = {}
+DIFFICULTY_MULT = {"easy": 0.85, "medium": 1.0, "hard": 1.08, "impoppable": 1.2}
+
+
+def cost(tower, path=None, tier=None, difficulty="medium"):
+    """Any monkey's cost on any difficulty, from tower_costs.json (Medium prices read off the
+    Monkeys screen by price_scan.py), scaled like the game: x0.85 / 1 / 1.08 / 1.2, to the
+    nearest $5. cost("Ice Monkey", "mid", 5, "impoppable") = Absolute Zero. None if unknown."""
+    if not _COSTS:
+        try:
+            _COSTS.update(json.load(open(COSTS_FILE, encoding="utf-8")))
+        except (OSError, ValueError):
+            return None
+    t = _COSTS.get(tower) or {}
+    base = t.get("place") if path is None else (t.get(path) or [None] * 5)[tier - 1]
+    if not base:
+        return None
+    return int(5 * round(base * DIFFICULTY_MULT[difficulty.lower()] / 5))
+
+
 def set_price(tower, path, tier, v):
     """Save a price (path None = placing it) to prices.json."""
     t = _prices().setdefault(tower, {})
