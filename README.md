@@ -22,7 +22,7 @@ Combinations of easy and impoppable maps.
 
 ## Update
 
-**Autofarm.exe** checks for an update every time it opens and installs it by itself. Your stats and settings are kept.
+The app checks for an update every time it opens and installs it by itself (press **RESTART** when it says so). Your stats and settings are kept.
 (Or stop the farm and double-click **farm\Updater.bat**.)
 
 ## Play

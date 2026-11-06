@@ -585,12 +585,13 @@ class App:
         self.proc = None
         self.stop_at = None
         self.updating = False
+        self.restart_ready = False
         self.keep = []
         self.build()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.refresh()
-        if "--updated" in sys.argv:         # Autofarm.exe just pulled a newer version
-            self.root.after(600, lambda: self.toast("Updated to the newest version."))
+        if not self.running():              # check for an update once the window is up
+            self.root.after(1500, lambda: self.do_update(auto=True))
 
     def static(self, img, x, y, anchor="nw"):
         p = ImageTk.PhotoImage(img)
@@ -826,24 +827,38 @@ class App:
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.stop_at = None
 
-    def do_update(self):
+    def do_update(self, auto=False):
+        if self.restart_ready:
+            return self.restart()
         if self.running() or self.updating:
             return
         self.updating = True
         self.update_btn.set("...", enabled=False)
 
         def run():
-            r = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
-                                os.path.join(HERE, "updater.ps1")], cwd=HERE, capture_output=True,
-                               text=True, creationflags=NO_WINDOW)
-            msg = (r.stdout.strip().splitlines() or ["Done."])[-1]
-            self.root.after(0, lambda: self.update_done(msg))
+            try:
+                import updater
+                code, msg = updater.update()
+            except Exception as e:
+                code, msg = 1, f"Update failed: {e}"
+            self.root.after(0, lambda: self.update_done(code, msg, auto))
         threading.Thread(target=run, daemon=True).start()
 
-    def update_done(self, msg):
+    def update_done(self, code, msg, auto):
         self.updating = False
-        self.update_btn.set("UPDATE", enabled=True)
-        self.toast(msg + (" Reopen the app." if msg.startswith("Updated") else ""))
+        if code == 2:                       # new files are in: RESTART loads them
+            self.restart_ready = True
+            self.update_btn.set("RESTART", GREEN, enabled=True)
+            return self.toast("Updated. Press RESTART to use the new version.")
+        self.update_btn.set("UPDATE", BLUE, enabled=not self.running())
+        if not auto:                        # the launch check stays quiet unless there's news
+            self.toast(msg)
+
+    def restart(self):
+        if self.running():
+            return self.toast("Stop the farm first, then press RESTART.")
+        subprocess.Popen([sys.executable, os.path.abspath(__file__)], cwd=HERE, creationflags=NO_WINDOW)
+        self.root.destroy()
 
     def toast(self, msg):
         t = text_img(msg, 19, max_w=W - 120)

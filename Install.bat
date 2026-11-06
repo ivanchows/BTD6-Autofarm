@@ -51,7 +51,7 @@ if not defined UV for /f "delims=" %%F in ('dir /b /s "%APPDATA%\Python\uv.exe" 
 exit /b
 
 :launch
-rem The app: Autofarm.exe checks for an update, then opens it (no console window)
+rem The app (no console window); it checks for updates itself
 if exist "%~dp0Autofarm.exe" (
   start "" "%~dp0Autofarm.exe"
   goto launched

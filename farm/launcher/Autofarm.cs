@@ -1,15 +1,12 @@
 // Autofarm.exe: opens the BTD6 Autofarm app (farm\gui.py). It sits at the top of the download
 // beside Install.bat; everything else lives in the farm folder.
 //   1. The app already open? Bring its window to the front instead of opening a second one.
-//   2. Check for an update (updater.ps1 asks GitHub first, downloads only if there is one).
-//      Skipped while the farm is running, so files don't change under a live game.
-//   3. Start the app through uv, without a console window.
+//   2. Start the app through uv, without a console window. The app checks for updates itself.
 // Build: launcher\build.bat (uses the C# compiler that ships with Windows).
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 static class Program
@@ -44,52 +41,14 @@ static class Program
             return;
         }
 
-        bool updated = false;
-        string updater = Path.Combine(dir, "updater.ps1");
-        if (File.Exists(updater) && !FarmRunning(dir))
-        {
-            try
-            {
-                var psi = new ProcessStartInfo("powershell.exe",
-                    "-NoProfile -ExecutionPolicy Bypass -File \"" + updater + "\"")
-                {
-                    WorkingDirectory = dir, UseShellExecute = false, CreateNoWindow = true,
-                    RedirectStandardOutput = true, RedirectStandardError = true
-                };
-                using (var p = Process.Start(psi))
-                {
-                    p.StandardOutput.ReadToEnd();
-                    p.StandardError.ReadToEnd();
-                    if (p.WaitForExit(180000)) updated = p.ExitCode == 2;
-                }
-            }
-            catch (Exception) { }       // no update today: open the app anyway
-        }
-
         string uvw = Path.Combine(Path.GetDirectoryName(uv), "uvw.exe");
-        string extra = updated ? " --updated" : "";
         var start = File.Exists(uvw)
-            ? new ProcessStartInfo(uvw, "run gui.py" + extra)
-            : new ProcessStartInfo(uv, "run --gui-script gui.py" + extra);
+            ? new ProcessStartInfo(uvw, "run gui.py")
+            : new ProcessStartInfo(uv, "run --gui-script gui.py");
         start.WorkingDirectory = dir;
         start.UseShellExecute = false;
         start.CreateNoWindow = true;
         Process.Start(start);
-    }
-
-    // The farm writes a heartbeat to state.json every second while it runs.
-    static bool FarmRunning(string dir)
-    {
-        try
-        {
-            string s = File.ReadAllText(Path.Combine(dir, "state.json"));
-            var m = Regex.Match(s, "\"heartbeat\":\\s*([0-9.]+)");
-            if (!m.Success) return false;
-            double beat = double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
-            double now = (DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
-            return now - beat < 15 && !s.Contains("\"stopped\": true");
-        }
-        catch (Exception) { return false; }
     }
 
     // Where uv lands with each way Install.bat installs it.
