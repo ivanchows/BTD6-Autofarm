@@ -330,7 +330,10 @@ _pause_was = {"down": False}
 
 
 def _pause_pressed():
-    """True once per press of Numpad 1 (an edge, so holding it doesn't flicker)."""
+    """True once per press of Numpad 1 (an edge, so holding it doesn't flicker), or once per
+    Pause click in the app (gui.py)."""
+    if _pause_was.pop("gui", False):
+        return True
     down = any(user32.GetAsyncKeyState(k) & 0x8000 for k in PAUSE_KEYS)
     pressed = down and not _pause_was["down"]
     _pause_was["down"] = down
@@ -1302,18 +1305,41 @@ def farm_guarded():
         os._exit(3)
 
 
+GUI_CMD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui_cmd.txt")
+
+
+def gui_command():
+    """"pause", "stop" or "afk" from the app, or None. Read once, then deleted; a word older
+    than 15 s is dropped, so a stale Stop can't end the next run."""
+    try:
+        age = time.time() - os.path.getmtime(GUI_CMD)
+        with open(GUI_CMD, encoding="utf-8") as f:
+            word = f.read().strip().lower()
+        os.remove(GUI_CMD)
+    except OSError:
+        return None
+    return word if age < 15 else None
+
+
 def hotkeys():
     """Stop keys in their own thread, polled fast with the 'pressed since last poll' bit,
     so a quick tap is never missed, even if the farm thread is busy or dead."""
     afk_was = False
+    next_cmd = 0
     while True:
+        gui = None
+        if time.time() >= next_cmd:         # the app's buttons (gui.py) drop a word in this file
+            next_cmd = time.time() + 0.25
+            gui = gui_command()
+        if gui == "pause":
+            _pause_was["gui"] = True
         afk_down = any(user32.GetAsyncKeyState(k) & 0x8000 for k in AFK_KEYS)
-        if afk_down and not afk_was:
+        if gui == "afk" or (afk_down and not afk_was):
             STATS["afk"] = not STATS.get("afk")
             print("AFK mode " + ("on: tabs back into BTD6 by itself" if STATS["afk"] else "off"))
             sys.stdout.flush()
         afk_was = afk_down
-        if any(user32.GetAsyncKeyState(k) & 0x8001 for k in STOP_KEYS):
+        if gui == "stop" or any(user32.GetAsyncKeyState(k) & 0x8001 for k in STOP_KEYS):
             STATS["stopped"] = True
             save_state(False)
             print("stopped by hotkey")

@@ -26,7 +26,9 @@ Stop the farm, then double-click **Updater.bat**. Your stats and settings are ke
 ## Play
 
 1. Open BTD6 and go to the home screen.
-2. Double-click **Play.bat**. It plays the map with **bonus rewards** in the candy event and switches maps by itself.
+2. Double-click **Autofarm.bat**. Pick **Bonus map** (the map with **bonus rewards** in the candy event; it switches maps by itself) or a map, then press **Start**.
+
+Or double-click **Play.bat** to start the bonus map without the app.
 
 Want one map only? Open a terminal in the folder and type (swap the file for any map below):
 
