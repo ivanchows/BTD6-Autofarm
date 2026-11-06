@@ -1,1 +1,4 @@
 *.bat text eol=crlf
+# keep these out of the Download ZIP (players only need Autofarm.exe, Install.bat, README and farm/)
+.gitattributes export-ignore
+.gitignore export-ignore
