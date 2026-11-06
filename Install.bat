@@ -10,8 +10,8 @@ if not exist "%~dp0watchdog.py" (
 
 call :finduv
 if defined UV (
-  echo uv is already installed. You are ready: double-click Play.bat.
-  goto end
+  echo uv is already installed. Opening the app...
+  goto launch
 )
 
 echo Installing uv (1 of 3: official installer)...
@@ -37,8 +37,8 @@ goto end
 :ok
 echo.
 "%UV%" --version
-echo uv is installed. Double-click Play.bat to start.
-goto end
+echo uv is installed. Opening the app...
+goto launch
 
 rem Finds uv even when this window can't see it yet (PATH only updates in new windows)
 :finduv
@@ -48,6 +48,14 @@ if not defined UV if exist "%USERPROFILE%\.local\bin\uv.exe" set "UV=%USERPROFIL
 if not defined UV if exist "%USERPROFILE%\.cargo\bin\uv.exe" set "UV=%USERPROFILE%\.cargo\bin\uv.exe"
 if not defined UV if exist "%LOCALAPPDATA%\Microsoft\WinGet\Links\uv.exe" set "UV=%LOCALAPPDATA%\Microsoft\WinGet\Links\uv.exe"
 if not defined UV for /f "delims=" %%F in ('dir /b /s "%APPDATA%\Python\uv.exe" 2^>nul') do set "UV=%%F"
+exit /b
+
+:launch
+rem The app (gui.py), without a console window: uvw = uv's no-window twin
+set "UVW=%UV:uv.exe=uvw.exe%"
+if exist "%UVW%" (start "" "%UVW%" run gui.py) else (start "" "%UV%" run --gui-script gui.py)
+echo The first start takes up to a minute. Next time, double-click Autofarm.bat.
+timeout /t 5 >nul
 exit /b
 
 :end

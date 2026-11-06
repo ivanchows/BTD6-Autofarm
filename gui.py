@@ -21,6 +21,7 @@ import sys
 import threading
 import time
 import tkinter as tk
+from tkinter import ttk
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageTk
 
@@ -34,6 +35,8 @@ SKIP_FILE = os.path.join(HERE, "skipped_maps.json")
 BONUS_FILE = os.path.join(HERE, "bonus_map.txt")
 FONT_FILE = os.path.join(HERE, "assets", "Fredoka.ttf")
 NO_WINDOW = 0x08000000
+STEAM_URL = "steam://rungameid/960090"      # Bloons TD 6 (the same link core.relaunch uses)
+GAME_LOAD = 25                              # seconds after the window shows before the farm starts
 W, H = 1120, 740
 
 BONUS_PLAYS = {  # map -> the farm bonus mode plays there (watchdog.BONUS_SCRIPTS)
@@ -416,6 +419,14 @@ def find_uv():
     return None
 
 
+def game_open():
+    """Is BTD6 running? Its window is titled BloonsTD6."""
+    try:
+        return bool(ctypes.windll.user32.FindWindowW(None, "BloonsTD6"))
+    except Exception:
+        return False
+
+
 def hms(sec):
     sec = int(max(0, sec))
     return f"{sec // 3600}:{sec // 60 % 60:02d}:{sec % 60:02d}"
@@ -574,8 +585,6 @@ class App:
         self.proc = None
         self.stop_at = None
         self.updating = False
-        self.log_sig = None
-        self.log_first = True
         self.keep = []
         self.build()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -594,6 +603,8 @@ class App:
         t2 = text_img("AUTOFARM", 44, sw=2)
         self.static(t2, 22 + t.width, 14)
         self.pill = Sprite(cv, 22 + t.width + t2.width + 14, 20)
+        self.game_btn = Button(self, 22 + t.width + t2.width + 182, 26, 168, 42, self.open_game, size=17, r=21)
+        self.waiting_since = None       # Start pressed with the game closed: when it was opened
         self.update_btn = Button(self, W - 166, 20, 146, 52, self.do_update, size=22)
         self.update_btn.set("UPDATE", BLUE)
 
@@ -634,11 +645,33 @@ class App:
         ly = cy + 100
         lh = RY + RH - ly - 70
         self.static(plate(RW - 44, lh, fill="#0f2c66"), RX + 22, ly)
+        sty = ttk.Style(self.root)
+        sty.theme_use("clam")
+        sty.layout("Log.Vertical.TScrollbar", [("Vertical.Scrollbar.trough", {"sticky": "ns", "children": [
+            ("Vertical.Scrollbar.thumb", {"expand": "1", "sticky": "nswe"})]})])
+        sty.configure("Log.Vertical.TScrollbar", troughcolor="#0f2c66", background="#3f7fe0", bordercolor="#0f2c66",
+                      lightcolor="#3f7fe0", darkcolor="#3f7fe0", gripcount=0, arrowsize=10, relief="flat")
+        sty.map("Log.Vertical.TScrollbar", background=[("active", "#6aa6ff"), ("pressed", "#8cbcff")],
+                lightcolor=[("active", "#6aa6ff")], darkcolor=[("active", "#6aa6ff")])
         self.log = tk.Text(self.root, bg="#0f2c66", fg=CREAM, bd=0, highlightthickness=0,
                            font=("Consolas", 10), wrap="none", relief="flat", cursor="arrow",
-                           insertwidth=0)
-        cv.create_window(RX + 40, ly + 14, window=self.log, anchor="nw", width=RW - 80, height=lh - 26)
+                           insertwidth=0, selectbackground="#3f7fe0", selectforeground="white", padx=2)
+        self.log_bar = ttk.Scrollbar(self.root, orient="vertical", style="Log.Vertical.TScrollbar",
+                                     command=self.log.yview)
+        self.log.configure(yscrollcommand=self.on_log_scroll)
+        cv.create_window(RX + 38, ly + 14, window=self.log, anchor="nw", width=RW - 96, height=lh - 26)
+        cv.create_window(RX + RW - 52, ly + 12, window=self.log_bar, anchor="nw", width=10, height=lh - 24)
+        for tag, color in (("err", "#ff8f8f"), ("good", "#8cf29a"), ("info", "#ffd35a"), ("dim", "#7f9bd0")):
+            self.log.tag_configure(tag, foreground=color)
         self.log.configure(state="disabled")
+        self.log.bind("<Control-c>", lambda e: self.log.event_generate("<<Copy>>"))
+        self.latest_btn = Button(self, RX + RW - 160, ly + lh - 50, 96, 34, self.jump_latest, size=13, r=12)
+        self.latest_btn.set("LATEST", BLUE)
+        cv.itemconfigure(self.latest_btn.sprite.id, state="hidden")
+        self.log_pos = 0            # bytes of farm.log already shown
+        self.log_rest = ""          # a line the farm hasn't finished writing yet
+        self.log_follow = True      # stick to the newest line until the user scrolls up
+        self.read_log()
 
         # keybinds: click one, press a key; saved to settings.json (the farm reads it at start)
         self.listening = None
@@ -752,11 +785,30 @@ class App:
         if self.running():
             self.send("pause")
 
+    def open_game(self):
+        if not game_open():
+            try:
+                os.startfile(STEAM_URL)
+            except OSError:
+                return self.toast("Couldn't start Steam. Open BTD6 yourself.")
+            self.toast("Opening BTD6...")
+
     def on_start(self):
+        if self.waiting_since:              # waiting for the game: Start again cancels
+            self.waiting_since = None
+            return self.toast("Cancelled.")
         if self.running():
             self.send("stop")
             self.stop_at = time.time()
             return
+        if not game_open():
+            self.open_game()
+            self.waiting_since = time.time()
+            self.game_seen = None
+            return
+        self.launch_farm()
+
+    def launch_farm(self):
         try:
             os.remove(CMD_FILE)
         except OSError:
@@ -806,6 +858,77 @@ class App:
         else:
             self.root.destroy()
 
+    # ---------------------------------------------------------------- log
+    LOG_KEEP = 3000         # lines kept in the box; older ones drop off the top
+    LOG_FIRST = 200_000     # bytes read when the app opens (the end of the file)
+
+    @staticmethod
+    def log_tag(line):
+        low = line.lower()
+        if line.startswith("!!") or "traceback" in low or "error" in low or "crash" in low or "lost" in low \
+                or "gave up" in low or "failed" in low:
+            return "err"
+        if "won" in low or "victory" in low or "candy" in low:
+            return "good"
+        if "bonus" in low or "starting" in low or "afk" in low or "switch" in low or "stopped" in low \
+                or "paused" in low or "resumed" in low or "rejoined" in low:
+            return "info"
+        if re.match(r"round \d+$", line.strip()) or "steps queued" in low:
+            return "dim"
+        return None
+
+    def on_log_scroll(self, first, last):
+        self.log_bar.set(first, last)
+        self.log_follow = float(last) >= 0.999
+        self.cv.itemconfigure(self.latest_btn.sprite.id, state="hidden" if self.log_follow else "normal")
+
+    def jump_latest(self):
+        self.log.see("end")
+        self.log.xview_moveto(0)
+
+    def read_log(self):
+        """Append only what farm.log gained since the last look. A smaller file means it was
+        rolled over (watchdog keeps it under 5 MB): start again from its top."""
+        try:
+            size = os.path.getsize(FARM_LOG)
+        except OSError:
+            size = 0
+        fresh = size < self.log_pos or (self.log_pos == 0 and size)
+        if size < self.log_pos:
+            self.log_pos, self.log_rest = 0, ""
+            self.log.configure(state="normal")
+            self.log.delete("1.0", "end")
+            self.log.configure(state="disabled")
+        if size > self.log_pos:
+            start = max(self.log_pos, size - self.LOG_FIRST) if self.log_pos == 0 else self.log_pos
+            try:
+                with open(FARM_LOG, "rb") as f:
+                    f.seek(start)
+                    data = f.read(size - start)
+            except OSError:
+                data = b""
+            self.log_pos = start + len(data)
+            text = self.log_rest + data.decode("utf-8", "replace")
+            lines = text.split("\n")
+            self.log_rest = lines.pop()
+            if start and start != self.log_pos and fresh:
+                lines = lines[1:]           # the first line read mid-file is a fragment
+            if lines:
+                follow = self.log_follow
+                self.log.configure(state="normal")
+                empty = self.log.index("end-1c") == "1.0"
+                for i, line in enumerate(lines):
+                    line = line.rstrip("\r")
+                    self.log.insert("end", ("" if empty and i == 0 else "\n") + line, self.log_tag(line) or ())
+                extra = int(self.log.index("end-1c").split(".")[0]) - self.LOG_KEEP
+                if extra > 0:
+                    self.log.delete("1.0", f"{extra + 1}.0")
+                self.log.configure(state="disabled")
+                if follow:
+                    self.log.see("end")
+                    self.log.xview_moveto(0)
+        self.root.after(500, self.read_log)
+
     # ---------------------------------------------------------------- state
     def running(self):
         if self.proc and self.proc.poll() is None:
@@ -851,11 +974,25 @@ class App:
         if not on:
             self.stop_at = None
 
+        game = game_open()
+        self.game_btn.set("BTD6 OPEN" if game else "BTD6 CLOSED", GREEN if game else RED)
+        if self.waiting_since:              # Start was pressed with the game closed
+            if game and not self.game_seen:
+                self.game_seen = time.time()
+            if self.game_seen and time.time() - self.game_seen >= GAME_LOAD:
+                self.waiting_since = None
+                self.launch_farm()
+            elif time.time() - self.waiting_since > 300:
+                self.waiting_since = None
+                self.toast("BTD6 didn't open. Open it, then press START.")
+
         label, style = (("STOPPING", YELLOW) if stopping else ("PAUSED", YELLOW) if paused
-                        else ("RUNNING", GREEN) if on else ("STOPPED", GREY))
+                        else ("RUNNING", GREEN) if on else ("WAITING", YELLOW) if self.waiting_since
+                        else ("STOPPED", GREY))
         self.pill.show(label, lambda: compose(btd_button(150, 42, style, r=21),
                                               (text_img(label, 19, stroke=style["ink"]), "center")))
-        self.start_btn.set("STOP" if on else "START", RED if on else GREEN)
+        self.start_btn.set("STOP" if on else "CANCEL" if self.waiting_since else "START",
+                           RED if on else YELLOW if self.waiting_since else GREEN)
         self.pause_btn.set("RESUME" if paused else "PAUSE", YELLOW, enabled=bool(on))
         self.update_btn.set(enabled=not on and not self.updating)
         self.paint_afk(bool(stats.get("afk")) if on else bool(self.prefs.get("afk")))
@@ -879,22 +1016,6 @@ class App:
         self.now_next.show(n, lambda: text_img(n, 20, fill=GOLD, max_w=530) if n
                            else Image.new("RGBA", (1, 1)))
         self.refresh_tiles(playing)
-
-        try:
-            sig = (os.path.getsize(FARM_LOG), os.path.getmtime(FARM_LOG))
-        except OSError:
-            sig = None
-        if sig != self.log_sig:
-            self.log_sig = sig
-            at_end = self.log.yview()[1] > 0.98 or self.log_first
-            self.log_first = False
-            self.log.configure(state="normal")
-            self.log.delete("1.0", "end")
-            self.log.insert("end", "\n".join(tail(FARM_LOG, 300)))
-            self.log.configure(state="disabled")
-            if at_end:
-                self.log.see("end")
-            self.log.xview_moveto(0)        # long lines must not leave it scrolled sideways
 
 
 if __name__ == "__main__":

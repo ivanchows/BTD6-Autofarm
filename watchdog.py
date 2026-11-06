@@ -117,6 +117,11 @@ def start_farm(extra=()):
     if fresh and st.get("running") and user32.FindWindowW(None, "BloonsTD6"):
         args.append("--running")        # towers are already down in this game
     log("starting farm " + " ".join(args[3:]))
+    try:                                # keep farm.log small: past 5 MB it becomes farm.log.old
+        if os.path.getsize(FARM_LOG) > 5 * 1024 * 1024:
+            os.replace(FARM_LOG, FARM_LOG + ".old")
+    except OSError:
+        pass
     out = open(FARM_LOG, "a", encoding="utf-8")
     env = dict(os.environ, PYTHONUNBUFFERED="1", **({"BTD6_AFK": "1"} if AFK else {}))
     if BONUS and STAND_IN["script"]:

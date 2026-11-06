@@ -8,7 +8,7 @@ Combinations of easy and impoppable maps.
 ## Setup (once)
 
 1. Click **Download** above and unzip it.
-2. Double-click **Install.bat** (it installs [uv](https://docs.astral.sh/uv/), which runs the farm).
+2. Double-click **Install.bat** (it installs [uv](https://docs.astral.sh/uv/), which runs the farm). The app opens when it's done.
    If it says it couldn't install uv, check your internet or antivirus and run it again.
 3. In BTD6, set the game to **1920x1080** and **English**.
 4. Keep the **default keybinds**, but set these 3 yourself (they start blank):
@@ -26,7 +26,7 @@ Stop the farm, then double-click **Updater.bat**. Your stats and settings are ke
 ## Play
 
 1. Open BTD6 and go to the home screen.
-2. Double-click **Autofarm.bat**. Pick **Bonus map** (the map with **bonus rewards** in the candy event; it switches maps by itself) or a map, then press **Start**.
+2. Double-click **Autofarm.bat**. Pick **Bonus map** (the map with **bonus rewards** in the candy event; it switches maps by itself) or a map, then press **Start**. BTD6 closed? Start opens it first.
 
 Or double-click **Play.bat** to start the bonus map without the app.
 

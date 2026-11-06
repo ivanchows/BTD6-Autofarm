@@ -11,3 +11,4 @@ maps/glacial_prices.json
 skipped_maps.json
 gui.json
 gui_cmd.txt
+*.log.old
