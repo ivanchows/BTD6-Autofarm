@@ -3,7 +3,7 @@ title BTD6-Autofarm setup
 cd /d "%~dp0"
 
 rem Unzipped? (run from inside the zip, Windows uses a temp folder without the other files)
-if not exist "%~dp0watchdog.py" (
+if not exist "%~dp0farm\watchdog.py" (
   echo Unzip the folder first: right-click the zip, Extract All, then run Install.bat from there.
   goto end
 )
@@ -57,6 +57,7 @@ if exist "%~dp0Autofarm.exe" (
   goto launched
 )
 set "UVW=%UV:uv.exe=uvw.exe%"
+cd /d "%~dp0farm"
 if exist "%UVW%" (start "" "%UVW%" run gui.py) else (start "" "%UV%" run --gui-script gui.py)
 :launched
 echo The first start takes up to a minute. Next time, double-click Autofarm.exe.

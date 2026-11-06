@@ -1,4 +1,5 @@
-// Autofarm.exe: opens the BTD6 Autofarm app (gui.py).
+// Autofarm.exe: opens the BTD6 Autofarm app (farm\gui.py). It sits at the top of the download
+// beside Install.bat; everything else lives in the farm folder.
 //   1. The app already open? Bring its window to the front instead of opening a second one.
 //   2. Check for an update (updater.ps1 asks GitHub first, downloads only if there is one).
 //      Skipped while the farm is running, so files don't change under a live game.
@@ -23,7 +24,7 @@ static class Program
     [STAThread]
     static void Main()
     {
-        string dir = AppDomain.CurrentDomain.BaseDirectory;
+        string dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "farm");
         IntPtr open = FindWindow(null, Title);
         if (open != IntPtr.Zero)
         {
@@ -33,7 +34,7 @@ static class Program
         }
         if (!File.Exists(Path.Combine(dir, "gui.py")))
         {
-            MessageBox.Show("Unzip the folder first (right-click the zip, Extract All), then open Autofarm.exe from there.", Title);
+            MessageBox.Show("Unzip the whole folder first (right-click the zip, Extract All), then open Autofarm.exe from there. It needs the farm folder next to it.", Title);
             return;
         }
         string uv = FindUv();

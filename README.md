@@ -23,16 +23,16 @@ Combinations of easy and impoppable maps.
 ## Update
 
 **Autofarm.exe** checks for an update every time it opens and installs it by itself. Your stats and settings are kept.
-(Or stop the farm and double-click **Updater.bat**.)
+(Or stop the farm and double-click **farm\Updater.bat**.)
 
 ## Play
 
 1. Open BTD6 and go to the home screen.
 2. Double-click **Autofarm.exe**. Pick **Bonus map** (the map with **bonus rewards** in the candy event; it switches maps by itself) or a map, then press **Start**. BTD6 closed? Start opens it first.
 
-Or double-click **Play.bat** to start the bonus map without the app.
+Or double-click **farm\Play.bat** to start the bonus map without the app.
 
-Want one map only? Open a terminal in the folder and type (swap the file for any map below):
+Want one map only? Pick it in the app, or open a terminal in the **farm** folder and type (swap the file for any map below):
 
 ```
 uv run watchdog.py sanctuary_deflation.py
@@ -44,7 +44,7 @@ uv run watchdog.py sanctuary_deflation.py
 | `Numpad 0` | Stop |
 | `Numpad 2` | AFK mode on / off |
 
-Change these in `settings.json`:
+Change these in the app (the buttons under the log), or in `farm\settings.json`:
 
 ```
 {

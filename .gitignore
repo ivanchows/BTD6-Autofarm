@@ -6,10 +6,11 @@ overlay_pos.json
 featured/
 state.json.tmp
 bonus_map.txt
-maps/glacial_progress.json
-maps/glacial_prices.json
+farm/maps/glacial_progress.json
+farm/maps/glacial_prices.json
 skipped_maps.json
 gui.json
 gui_cmd.txt
 *.log.old
 .version
+Autofarm.exe.old
