@@ -1,4 +1,4 @@
-# BTD6-Autofarm for Candies Expert Maps
+﻿# BTD6-Autofarm for Candies Expert Maps
 
 Farms candies for you while you're away.
 Combinations of easy and impoppable maps.
@@ -18,6 +18,10 @@ Combinations of easy and impoppable maps.
 | Desperado | `;` |
 | Mermonkey | `O` |
 | Skywarden | `P` |
+
+## Update
+
+Stop the farm, then double-click **Updater.bat**. Your stats and settings are kept.
 
 ## Play
 
