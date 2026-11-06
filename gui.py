@@ -589,6 +589,8 @@ class App:
         self.build()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.refresh()
+        if "--updated" in sys.argv:         # Autofarm.exe just pulled a newer version
+            self.root.after(600, lambda: self.toast("Updated to the newest version."))
 
     def static(self, img, x, y, anchor="nw"):
         p = ImageTk.PhotoImage(img)

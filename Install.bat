@@ -51,10 +51,15 @@ if not defined UV for /f "delims=" %%F in ('dir /b /s "%APPDATA%\Python\uv.exe" 
 exit /b
 
 :launch
-rem The app (gui.py), without a console window: uvw = uv's no-window twin
+rem The app: Autofarm.exe checks for an update, then opens it (no console window)
+if exist "%~dp0Autofarm.exe" (
+  start "" "%~dp0Autofarm.exe"
+  goto launched
+)
 set "UVW=%UV:uv.exe=uvw.exe%"
 if exist "%UVW%" (start "" "%UVW%" run gui.py) else (start "" "%UV%" run --gui-script gui.py)
-echo The first start takes up to a minute. Next time, double-click Autofarm.bat.
+:launched
+echo The first start takes up to a minute. Next time, double-click Autofarm.exe.
 timeout /t 5 >nul
 exit /b
 

@@ -497,7 +497,8 @@ def _ensure_placed(q):
 
 
 RESUMED = {"done": False}
-HOLD = {repr(MORTAR): 51}     # no steps on these before that round (user)
+HOLD = {repr(MORTAR): 51, repr(SPIKE): 21}     # no steps on these before that round (user;
+                                               # Spike from r21 again, 2026-11-05)
 # (a Spike hold until r21 lost twice: letting Ice 1 buy ahead lost r40, saving for it lost r31.
 #  The win had none: the Spike goes down around r20 as soon as the cash is there)
 SAVE_FOR = {repr(SPIKE)}          # (letting Ice 1 buy ahead spent the cash: Spike only at r29, lost r40)
