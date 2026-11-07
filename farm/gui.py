@@ -21,7 +21,6 @@ import sys
 import threading
 import time
 import tkinter as tk
-import winreg
 from tkinter import ttk
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageTk
@@ -432,50 +431,6 @@ def find_uv():
     return None
 
 
-RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
-RUN_NAME = "BTD6 Autofarm"
-
-
-def autostart_on():
-    """Is the app set to open (and press Start) when Windows signs in?"""
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as k:
-            winreg.QueryValueEx(k, RUN_NAME)
-            return True
-    except OSError:
-        return False
-
-
-def autostart_command():
-    uv = find_uv()
-    if not uv:
-        return None
-    uvw = os.path.join(os.path.dirname(uv), "uvw.exe")
-    gui = os.path.abspath(__file__)
-    if os.path.exists(uvw):
-        return f'"{uvw}" run "{gui}" --autostart'
-    return f'"{uv}" run --gui-script "{gui}" --autostart'
-
-
-def set_autostart(on):
-    """Adds or removes the sign-in entry (the user's own Run list: no admin needed)."""
-    try:
-        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as k:
-            if on:
-                cmd = autostart_command()
-                if not cmd:
-                    return False
-                winreg.SetValueEx(k, RUN_NAME, 0, winreg.REG_SZ, cmd)
-            else:
-                try:
-                    winreg.DeleteValue(k, RUN_NAME)
-                except FileNotFoundError:
-                    pass
-        return True
-    except OSError:
-        return False
-
-
 def game_open():
     """Is BTD6 running? Its window is titled BloonsTD6."""
     try:
@@ -627,9 +582,6 @@ class App:
             self.prefs["mode"] = "bonus"
         if self.prefs.get("map") not in ENTRIES:
             self.prefs["map"] = "infernal_impop.py"
-        if not isinstance(self.prefs.get("autostart"), bool):   # first run: take what Windows has
-            self.prefs["autostart"] = autostart_on()
-        set_autostart(self.prefs["autostart"])  # Windows follows the saved setting (and this folder)
         self.proc = None
         self.stop_at = None
         self.updating = False
@@ -638,10 +590,7 @@ class App:
         self.build()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.refresh()
-        if "--autostart" in sys.argv:       # opened at Windows sign-in: start farming
-            if not self.running():
-                self.root.after(3000, self.on_start)
-        elif not self.running():            # check for an update once the window is up
+        if not self.running():              # check for an update once the window is up
             self.root.after(1500, lambda: self.do_update(auto=True))
 
     def static(self, img, x, y, anchor="nw"):
@@ -661,8 +610,6 @@ class App:
         self.waiting_since = None       # Start pressed with the game closed: when it was opened
         self.update_btn = Button(self, W - 166, 20, 146, 52, self.do_update, size=22)
         self.update_btn.set("UPDATE", BLUE)
-        self.autostart_btn = Button(self, W - 352, 20, 186 - 10, 52, self.flip_autostart, size=18)
-        self.paint_autostart()
 
         # left: the maps, on wood like the in-game tower shop
         LX, LY, LW, LH = 16, 92, 462, H - 108
@@ -748,30 +695,6 @@ class App:
         self.root.bind("<KeyPress>", self.on_key)
         self.paint_keys()
         self.paint_mode()
-
-    # ---------------------------------------------------------------- autostart (top right)
-    def paint_autostart(self):
-        on = bool(self.prefs.get("autostart"))
-        self.autostart_btn.set("AUTOSTART ON" if on else "AUTOSTART OFF", GREEN if on else GREY)
-
-    def flip_autostart(self):
-        on = not self.prefs.get("autostart")
-        if not set_autostart(on):
-            return self.toast("Couldn't change autostart.")
-        self.prefs["autostart"] = on
-        self.save_prefs()
-        self.paint_autostart()
-
-    # ---------------------------------------------------------------- keybinds
-    KEY_DEFAULT = {"pause": "Numpad1", "stop": "Numpad0", "afk": "Numpad2"}
-    # Tk's key names -> the names settings.json (keys.py) takes. Only keys BTD6 doesn't use:
-    # letters, digits and , . / are tower and upgrade hotkeys in the game.
-    TK_KEYS = {**{f"KP_{i}": f"Numpad{i}" for i in range(10)}, **{f"F{i}": f"F{i}" for i in range(1, 25)},
-               "KP_Insert": "Insert", "KP_End": "End", "KP_Home": "Home", "KP_Prior": "PageUp",
-               "KP_Next": "PageDown", "KP_Delete": "Delete", "KP_Up": "Up", "KP_Down": "Down",
-               "KP_Left": "Left", "KP_Right": "Right", "Insert": "Insert", "Delete": "Delete",
-               "Home": "Home", "End": "End", "Prior": "PageUp", "Next": "PageDown", "Pause": "Pause",
-               "Scroll_Lock": "ScrollLock", "Up": "Up", "Down": "Down", "Left": "Left", "Right": "Right"}
 
     def keys(self):
         return {**self.KEY_DEFAULT, **{k: v for k, v in read_json(os.path.join(HERE, "settings.json"), {}).items()

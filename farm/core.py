@@ -246,7 +246,7 @@ def _send(inp):
 def key(ch, hold=0.03):
     if not in_front():
         return
-    vk = user32.VkKeyScanW(ord(ch)) & 0xFF if len(ch) == 1 else ch
+    vk = ch if isinstance(ch, int) else user32.VkKeyScanW(ord(ch)) & 0xFF if len(ch) == 1 else ch
     sc = user32.MapVirtualKeyW(vk, 0)
     for flags in (0x0008, 0x0008 | 0x0002):  # SCANCODE, then KEYUP
         i = INPUT(type=1)
@@ -718,6 +718,52 @@ def pick_banana_farm(im):
     return False
 
 
+# --- the game's Auto Start setting: the farm presses Space for round 1 only, so with Auto Start
+# off the game sat after the first round (user, 2026-11-07). In the Esc pause menu, by picture.
+PAUSE = [(1296, 800, (98, 202, 0), 40), (846, 800, (0, 192, 222), 40), (620, 800, (1, 192, 222), 40),
+         (1070, 800, (0, 192, 221), 40)]                     # Continue (green), Store/Home/Restart (blue)
+AUTO_START_ON = [(1290, 306, (120, 238, 0), 40), (1356, 306, (0, 213, 255), 40)]    # green track, knob right
+AUTO_START_OFF = [(1290, 306, (0, 213, 255), 40), (1356, 306, (52, 30, 14), 40)]    # knob left, dark track
+AUTO_START_BTN = (1323, 306)
+CONTINUE_BTN = (1296, 830)
+AUTO_START_OK = os.path.join(os.path.dirname(os.path.abspath(__file__)), "auto_start.ok")   # the watchdog clears it on start
+AUTO_START = {"checked": os.path.exists(AUTO_START_OK)}
+
+
+def ensure_auto_start():
+    """Once per launch of the farm, in a game: Esc -> pause menu -> Auto Start on -> Continue."""
+    if AUTO_START["checked"] or not in_front() or not matches(grab(), IN_GAME):
+        return
+    for _ in range(2):              # the first Esc may only close a tower's panel
+        key(0x1B)
+        if wait_for(PAUSE, 2):
+            break
+        if not matches(grab(), IN_GAME):
+            return print("auto start: the pause menu didn't come up")
+    else:
+        return print("auto start: the pause menu didn't come up")
+    wait_for(AUTO_START_ON, 2) or wait_for(AUTO_START_OFF, 0.5)    # the menu grows in: let it settle
+    time.sleep(0.2)
+    im = grab()
+    if matches(im, AUTO_START_OFF):
+        click(*AUTO_START_BTN)
+        time.sleep(0.6)
+        ok = matches(grab(), AUTO_START_ON)
+        print("auto start was OFF: turned it on" if ok else "auto start was OFF and didn't turn on")
+        AUTO_START["checked"] = ok
+    elif matches(im, AUTO_START_ON):
+        print("auto start is on")
+        AUTO_START["checked"] = True
+    else:
+        print("auto start: switch not found in the pause menu")
+        AUTO_START["checked"] = True        # don't open the menu every game over it
+    if AUTO_START["checked"]:
+        open(AUTO_START_OK, "w").close()    # later games of this launch skip the check
+    click(*CONTINUE_BTN)
+    if not wait_for(IN_GAME, 3):
+        click(*CONTINUE_BTN)
+
+
 def wait_for(checks, timeout):
     """Poll until the screen matches; False on timeout."""
     end = time.time() + timeout
@@ -1109,6 +1155,8 @@ def nav_to(map_name, difficulty_btn, mode_btn, final=None):
         if not wait_for(DEFLATION_POPUP, 1.5):
             break
         click(*OK_BTN)
+    if wait_for(IN_GAME, 5):
+        ensure_auto_start()
 
 
 NAV_DONE = {"t": 0}

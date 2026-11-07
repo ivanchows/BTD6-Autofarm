@@ -146,6 +146,10 @@ WATCH_START = time.time()
 
 def main():
     log("watchdog up" + (" (AFK mode: tabs back into BTD6)" if AFK else ""))
+    try:                                # a new start: the farm checks Auto Start once more
+        os.remove(os.path.join(HERE, "auto_start.ok"))
+    except OSError:
+        pass
     try:                                # a stop from the last session must not end this one
         st = state() or {}
         st.setdefault("stats", {}).pop("stopped", None)

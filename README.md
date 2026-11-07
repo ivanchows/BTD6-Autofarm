@@ -60,8 +60,6 @@ It only clicks while BTD6 is on your screen. Tab out and it waits, so you can do
 
 **AFK mode** (`Numpad 2`, or add `afk` to the command): it tabs back into BTD6 by itself 5 seconds after you leave. The info box says "AFK mode" while it's on.
 
-**AUTOSTART** (top right): when it is on, the app opens and starts farming when you sign in to Windows.
-
 ## Maps
 
 | File | Map | Mode | Hero |
