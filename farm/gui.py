@@ -586,12 +586,13 @@ class App:
         self.stop_at = None
         self.updating = False
         self.restart_ready = False
+        self.update_ready = False           # a newer version is on GitHub: the button says UPDATE
         self.keep = []
         self.build()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.refresh()
-        if not self.running():              # check for an update once the window is up
-            self.root.after(1500, lambda: self.do_update(auto=True))
+        self.root.after(1500, lambda: self.check_update(auto=True))    # on open: update by itself
+        self.root.after(self.CHECK_EVERY, self.check_often)
 
     def static(self, img, x, y, anchor="nw"):
         p = ImageTk.PhotoImage(img)
@@ -608,8 +609,8 @@ class App:
         self.pill = Sprite(cv, 22 + t.width + t2.width + 14, 20)
         self.game_btn = Button(self, 22 + t.width + t2.width + 182, 26, 168, 42, self.open_game, size=17, r=21)
         self.waiting_since = None       # Start pressed with the game closed: when it was opened
-        self.update_btn = Button(self, W - 166, 20, 146, 52, self.do_update, size=22)
-        self.update_btn.set("UPDATE", BLUE)
+        self.update_btn = Button(self, W - 216, 20, 196, 52, self.do_update, size=22)
+        self.update_btn.set("CHECK UPDATE", BLUE)
 
         # left: the maps, on wood like the in-game tower shop
         LX, LY, LW, LH = 16, 92, 462, H - 108
@@ -824,32 +825,77 @@ class App:
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.stop_at = None
 
-    def do_update(self, auto=False):
-        if self.restart_ready:
-            return self.restart()
-        if self.running() or self.updating:
-            return
+    CHECK_EVERY = 5 * 3600 * 1000           # ms between quiet checks while the app is open
+
+    def background(self, job, then):
+        """Run job() (code, msg) off the UI thread, then then(code, msg) on it."""
         self.updating = True
         self.update_btn.set("...", enabled=False)
 
         def run():
             try:
-                import updater
-                code, msg = updater.update()
+                code, msg = job()
             except Exception as e:
                 code, msg = 1, f"Update failed: {e}"
-            self.root.after(0, lambda: self.update_done(code, msg, auto))
+            self.root.after(0, lambda: then(code, msg))
         threading.Thread(target=run, daemon=True).start()
 
-    def update_done(self, code, msg, auto):
-        self.updating = False
-        if code == 2:                       # new files are in: RESTART loads them
-            self.restart_ready = True
+    def show_update_btn(self):
+        if self.restart_ready:
             self.update_btn.set("RESTART", GREEN, enabled=True)
+        elif self.update_ready:
+            self.update_btn.set("UPDATE", GREEN, enabled=True)
+        else:
+            self.update_btn.set("CHECK UPDATE", BLUE, enabled=True)
+
+    def do_update(self):
+        if self.updating:
+            return
+        if self.restart_ready:
+            return self.restart()
+        if not self.update_ready:
+            return self.check_update()
+        if self.running():
+            return self.toast("Stop the farm first, then press UPDATE.")
+        import updater
+        self.background(updater.update, self.update_done)
+
+    def check_update(self, auto=False):
+        """auto: the check when the app opens. An update found then installs and reopens the app
+        by itself (unless the farm is running: then the button just turns green)."""
+        if self.updating:
+            return
+        import updater
+
+        def done(code, msg):
+            self.updating = False
+            if code == 3:
+                self.update_ready = True
+                if auto and not self.running():
+                    self.toast("Updating...")
+                    return self.background(updater.update, lambda c, m: self.update_done(c, m, auto=True))
+            elif auto is False:      # only a press says "Up to date"
+                self.toast(msg)
+            self.show_update_btn()
+        self.background(updater.check, done)
+
+    def check_often(self):
+        if not (self.update_ready or self.restart_ready):
+            self.check_update(auto=None)    # quiet, and never installs by itself
+        self.root.after(self.CHECK_EVERY, self.check_often)
+
+    def update_done(self, code, msg, auto=False):
+        self.updating = False
+        if code == 2:                       # new files are in
+            self.update_ready, self.restart_ready = False, True
+            if auto and not self.running():
+                return self.restart()       # on open: straight into the new version
+            self.show_update_btn()
             return self.toast("Updated. Press RESTART to use the new version.")
-        self.update_btn.set("UPDATE", BLUE, enabled=not self.running())
-        if not auto:                        # the launch check stays quiet unless there's news
-            self.toast(msg)
+        if code == 0:
+            self.update_ready = False
+        self.show_update_btn()
+        self.toast(msg)
 
     def restart(self):
         if self.running():
@@ -1028,7 +1074,7 @@ class App:
         self.start_btn.set("STOP" if on else "CANCEL" if self.waiting_since else "START",
                            RED if on else YELLOW if self.waiting_since else GREEN)
         self.pause_btn.set("RESUME" if paused else "PAUSE", YELLOW, enabled=bool(on))
-        self.update_btn.set(enabled=not on and not self.updating)
+        self.update_btn.set(enabled=not self.updating)
         self.paint_afk(bool(stats.get("afk")) if on else bool(self.prefs.get("afk")))
 
         vals = {"wins": str(stats.get("wins", 0)), "losses": str(stats.get("losses", 0)),

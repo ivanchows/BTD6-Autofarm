@@ -22,7 +22,7 @@ Combinations of easy and impoppable maps.
 
 ## Update
 
-The app checks for an update every time it opens and installs it by itself (press **RESTART** when it says so). Your stats and settings are kept.
+The app checks for an update every time it opens, installs it and reopens by itself. While it's open it checks every 5 hours: **CHECK UPDATE** turns into a green **UPDATE** when there is one. Your stats and settings are kept.
 (Or stop the farm and double-click **farm\Updater.bat**.)
 
 ## Play

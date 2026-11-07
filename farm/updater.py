@@ -90,6 +90,26 @@ def _tidy():
             shutil.rmtree(old, ignore_errors=True) if os.path.isdir(old) else os.remove(old)
 
 
+def check():
+    """Is there a newer version? Downloads nothing. (code, message): 3 yes, 0 no, 1 couldn't check."""
+    if os.path.isdir(os.path.join(ROOT, ".git")) and shutil.which("git"):
+        if _git("fetch", "-q").returncode:
+            return 1, "Couldn't check for updates (offline?)."
+        n = _git("rev-list", "--count", "HEAD..@{u}").stdout.strip()
+        return (3, "Update ready.") if n.isdigit() and int(n) > 0 else (0, "Up to date.")
+    try:
+        req = urllib.request.Request(f"https://api.github.com/repos/{REPO}/commits/main",
+                                     headers={**AGENT, "Accept": "application/vnd.github.sha"})
+        sha = urllib.request.urlopen(req, timeout=10).read().decode().strip()
+    except Exception:
+        return 1, "Couldn't check for updates (offline?)."
+    try:
+        have = open(VERSION_FILE, encoding="utf-8").read().strip()
+    except OSError:
+        have = ""
+    return (0, "Up to date.") if sha and sha == have else (3, "Update ready.")
+
+
 def update():
     """Returns (code, message): 0 up to date, 2 updated, 1 couldn't."""
     if os.path.isdir(os.path.join(ROOT, ".git")) and shutil.which("git"):     # downloaded with git: just pull
