@@ -507,6 +507,11 @@ FIRST_FROM = {repr(MORTAR): 51}   # from that round its steps jump the queue (Mo
 FROZEN_CHECK = False
 
 
+def is_perma(op):
+    """The Perma-Spike step (Spike Factory bottom path to tier 5)."""
+    return op[0] == "tier" and _key(op) == repr(SPIKE) and op[2][1] == 2 and op[2][2] == 5
+
+
 def run_queue():
     """While the head step's tower is iced, move the first step for a tower that isn't iced
     to the front (its own order kept), so the cash goes where it can be spent. A step whose
@@ -537,7 +542,14 @@ def run_queue():
         if (I.G.get("round") or 0) >= r and q and _key(q[0]) != k:
             mine = [op for op in q if _key(op) == k]
             if mine:
-                I.G["queue"] = q = mine + [op for op in q if _key(op) != k]
+                rest = [op for op in q if _key(op) != k]
+                # ...but never ahead of Perma-Spike (user, 2026-11-07): the steps up to it go first
+                n = next((i + 1 for i, op in enumerate(rest) if is_perma(op)), 0)
+                I.G["queue"] = q = rest[:n] + mine + rest[n:]
+    if q and is_perma(q[0]) and repr(SPIKE) in iced:
+        I.G["last_try"] = now       # Perma-Spike next and the Spike is frozen: save the cash, wait
+        F.STATS["next"] = D.next_text()
+        return
     for k, r in HOLD.items():       # a held tower waits for its round: the steps after it go first
         if (I.G.get("round") or 0) < r:
             if k in SAVE_FOR and q and _key(q[0]) == k:

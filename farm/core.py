@@ -876,14 +876,25 @@ def _prices():
     return _PRICES
 
 
+# An Impoppable build played on Easy / Medium / Hard Standard (`watchdog.py <map>_impop.py@easy`):
+# the same towers and rounds, Standard mode, prices scaled from the Impoppable ones.
+DIFF = (os.environ.get("BTD6_DIFF") or "").lower() or None
+DIFF_BTN = {"easy": (625, 420), "medium": (958, 420), "hard": (1290, 420)}
+STANDARD_BTN = (640, 560)
+
+
 def price(tower, path=None, tier=None):
     """price("Ice Monkey") to place it; price("Ice Monkey", "bot", 3) for Cryo Cannon.
-    None if it isn't in prices.json."""
+    None if it isn't in prices.json. Off Impoppable (DIFF), scaled like the game does."""
     t = _prices().get(tower) or {}
     if path is None:
-        return t.get("place")
-    row = t.get(path) or []
-    return row[tier - 1] if 0 < tier <= len(row) and row[tier - 1] else None
+        v = t.get("place")
+    else:
+        row = t.get(path) or []
+        v = row[tier - 1] if 0 < tier <= len(row) and row[tier - 1] else None
+    if v and DIFF in DIFF_BTN:
+        v = int(5 * round(v / 1.2 * DIFFICULTY_MULT[DIFF] / 5))
+    return v
 
 
 COSTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tower_costs.json")
@@ -909,6 +920,8 @@ def cost(tower, path=None, tier=None, difficulty="medium"):
 
 def set_price(tower, path, tier, v):
     """Save a price (path None = placing it) to prices.json."""
+    if DIFF in DIFF_BTN:                # prices.json holds Impoppable prices only
+        return
     t = _prices().setdefault(tower, {})
     if path is None:
         t["place"] = int(v)
@@ -1050,6 +1063,8 @@ def candy_per_win():
 def nav_to(map_name, difficulty_btn, mode_btn, final=None):
     """Home -> Play -> Expert -> the map's page (stepped by the dots) -> map -> difficulty -> mode."""
     global MAP_NAME
+    if DIFF in DIFF_BTN and tuple(mode_btn) == (1280, 740):   # an Impoppable build on Standard
+        difficulty_btn, mode_btn, final = DIFF_BTN[DIFF], STANDARD_BTN, IN_GAME
     if not in_front():                  # tabbed out: wait, don't run the menus blind
         wait(1)
         return

@@ -72,7 +72,19 @@ YELLOW = {"face": ("#ffe47a", "#ffc531", "#f69c14"), "border": "#d9840b", "ink":
 RED = {"face": ("#ff958b", "#f2554f", "#d3333e"), "border": "#ae2230", "ink": "#6b0f19"}
 BLUE = {"face": ("#99d6ff", "#4aa8f6", "#2b80e1"), "border": "#1f64be", "ink": "#0e3c7c"}
 GREY = {"face": ("#e3e8ef", "#b8c2cf", "#95a1b2"), "border": "#77839a", "ink": "#3b4455"}
-MODE_COLOR = {"Easy": "#5ad67a", "Deflation": "#56c6ff", "Impoppable": "#ff6170"}
+MODE_COLOR = {"Deflation": "#56c6ff", "Easy": "#6be08a", "Medium": "#ffd84a", "Hard": "#ff9a45",
+              "Impoppable": "#ff6f7d"}
+COLS = [("Deflation", "DEFL"), ("Easy", "EASY"), ("Medium", "MED"), ("Hard", "HARD"), ("Impoppable", "IMPOP")]
+# key (what the watchdog is given) -> (map, mode). An Impoppable build also plays Easy / Medium / Hard
+# Standard: "<file>@easy" etc. (user, 2026-11-07)
+ENTRIES = {}
+for _f, _m, _mode, _h in MAPS:
+    ENTRIES[_f] = (_m, _mode)
+    if _mode == "Impoppable":
+        for _d in ("Easy", "Medium", "Hard"):
+            if not any(m == _m and md == _d for m, md in ENTRIES.values()):
+                ENTRIES[f"{_f}@{_d.lower()}"] = (_m, _d)
+ROWS = sorted({m for m, _ in ENTRIES.values()}, key=lambda m: m.lstrip("#").lower())
 TILE = {"face": ("#3274d6", "#2964c4", "#2155ae"), "border": "#17418c", "ink": "#0b2858"}
 TILE_LOCKED = {"face": ("#6b7891", "#5a6680", "#4c5770"), "border": "#3b4458", "ink": "#232a38"}
 INK = "#0b2350"          # deep navy outline
@@ -560,15 +572,17 @@ class Button:
         return None
 
 
-class MapTile(Button):
-    def __init__(self, app, x, y, w, h, info):
-        self.info = info
-        self.state = (False, False, False, False)
-        super().__init__(app, x, y, w, h, lambda: app.pick(info[0]))
+class MapCell(Button):
+    """One mode of one map: blue with the mode's colour as its label; yellow = picked, green = playing."""
+
+    def __init__(self, app, x, y, w, h, key, mode, label):
+        self.key, self.mode, self.text = key, mode, label
+        self.state = (False, False, False)
+        super().__init__(app, x, y, w, h, lambda: app.pick(key), size=13, r=10)
         self.draw()
 
-    def set_state(self, chosen, playing, locked, bonus):
-        st = (chosen, playing, locked, bonus)
+    def set_state(self, chosen, playing, locked):
+        st = (chosen, playing, locked)
         if st != self.state:
             self.state = st
             self.draw()
@@ -577,33 +591,19 @@ class MapTile(Button):
         return self.state
 
     def look(self):
-        st = TILE_LOCKED if self.state[2] else TILE
+        chosen, playing, locked = self.state
+        st = GREEN if playing else YELLOW if chosen else TILE_LOCKED if locked else TILE
         if self.hover and not self.down:
             st = dict(st, face=tuple(mix(c, "#ffffff", 0.15) for c in st["face"]))
         return st
 
     def base(self, st):
-        return tile(self.w, self.h, st, None if self.state[2] else MODE_COLOR[self.info[2]], glow=self.state[0])
+        return btd_button(self.w, self.h, st, r=self.r, rim=2)
 
     def layers(self, st):
-        chosen, playing, locked, bonus = self.state
-        fn, name, mode, hero = self.info
-        p = self.PAD
-        out = [(text_img(name, 19, stroke=st["ink"], max_w=self.w - 40), (p + 16, p + 6))]
-        c = chip(mode.upper(), mix(MODE_COLOR[mode], "#000000", 0.3), 11)
-        out.append((c, (p + 16, p + self.h - 24)))
-        if hero and not (playing or locked):
-            t = text_img(hero, 13, fill=CREAM, sw=0, shadow=False)
-            out.append((t, (p + 22 + c.width, p + self.h - 24 + (c.height - t.height) // 2)))
-        if playing:
-            g = chip("PLAYING", "#2b9a46", 11)
-            out.append((g, (p + self.w - g.width - 10, p + self.h - 24)))
-        if locked:
-            g = chip("LOCKED", "#3b4458", 11)
-            out.append((g, (p + self.w - g.width - 10, p + self.h - 24)))
-        if bonus:
-            out.append((star(24), (p + self.w - 32, p + 8)))
-        return out
+        chosen, playing, locked = self.state
+        fill = "white" if (chosen or playing) else CREAM if locked else MODE_COLOR[self.mode]
+        return [(text_img(self.text, self.size, fill=fill, stroke=st["ink"], max_w=self.w - 8), "center")]
 
 
 # ---------------------------------------------------------------- app
@@ -625,7 +625,7 @@ class App:
         self.prefs = read_json(PREFS, {"mode": "bonus", "map": "muddy_puddles_impop.py", "afk": False})
         if self.prefs.get("mode") not in ("bonus", "map"):
             self.prefs["mode"] = "bonus"
-        if self.prefs.get("map") not in {m[0] for m in MAPS}:
+        if self.prefs.get("map") not in ENTRIES:
             self.prefs["map"] = "infernal_impop.py"
         if not isinstance(self.prefs.get("autostart"), bool):   # first run: take what Windows has
             self.prefs["autostart"] = autostart_on()
@@ -667,14 +667,20 @@ class App:
         # left: the maps, on wood like the in-game tower shop
         LX, LY, LW, LH = 16, 92, 462, H - 108
         self.static(panel(LW, LH), LX - 12, LY - 12)
-        self.bonus_btn = Button(self, LX + 22, LY + 20, 202, 54, lambda: self.set_mode("bonus"), size=22)
-        self.pick_btn = Button(self, LX + 238, LY + 20, 202, 54, lambda: self.set_mode("map"), size=22)
-        self.tiles = {}
-        tw, th = 202, 64
-        for i, info in enumerate(MAPS):
-            x = LX + 22 + (i % 2) * (tw + 14)
-            y = LY + 96 + (i // 2) * (th + 10)
-            self.tiles[info[0]] = MapTile(self, x, y, tw, th, info)
+        # EVENT MODE (the Collection Event's bonus map) on/off; picking a map below turns it off
+        self.bonus_btn = Button(self, LX + 22, LY + 20, LW - 44, 54,
+                                lambda: self.set_mode("map" if self.prefs["mode"] == "bonus" else "bonus"), size=24)
+        self.cells, self.row_names = {}, {}
+        cw, gap, rh, pitch = 50, 5, 34, 40
+        cx0 = LX + LW - 22 - 5 * cw - 4 * gap
+        for i, name in enumerate(ROWS):
+            y = LY + 94 + i * pitch
+            self.static(plate(LW - 44, rh + 2, fill="#16408c"), LX + 22, y - 1)
+            self.row_names[name] = Sprite(cv, LX + 34, y + rh // 2, anchor="w")
+            for j, (mode, label) in enumerate(COLS):
+                key = next((k for k, v in ENTRIES.items() if v == (name, mode)), None)
+                if key:
+                    self.cells[key] = MapCell(self, cx0 + j * (cw + gap), y + 3, cw, rh - 6, key, mode, label)
 
         # right: one wood board with the stats, what's playing, the controls and the log
         RX, RY, RW, RH = 494, 92, W - 494 - 16, H - 108
@@ -731,11 +737,14 @@ class App:
 
         # keybinds: click one, press a key; saved to settings.json (the farm reads it at start)
         self.listening = None
-        kw = (RW - 44 - 2 * 12) // 3
+        cl = 96                                 # CLEAR (the log box only; farm.log is kept)
+        kw = (RW - 44 - cl - 3 * 12) // 3
         self.key_btns = {}
         for i, name in enumerate(("pause", "stop", "afk")):
             self.key_btns[name] = Button(self, RX + 22 + i * (kw + 12), RY + RH - 58, kw, 40,
                                          lambda n=name: self.listen(n), size=15, r=14)
+        self.clear_btn = Button(self, RX + RW - 22 - cl, RY + RH - 58, cl, 40, self.clear_log, size=15, r=14)
+        self.clear_btn.set("CLEAR", BLUE)
         self.root.bind("<KeyPress>", self.on_key)
         self.paint_keys()
         self.paint_mode()
@@ -825,8 +834,7 @@ class App:
 
     def paint_mode(self):
         bonus = self.prefs["mode"] == "bonus"
-        self.bonus_btn.set("BONUS MAP", YELLOW if bonus else BLUE)
-        self.pick_btn.set("PICK A MAP", BLUE if bonus else YELLOW)
+        self.bonus_btn.set("EVENT MODE", YELLOW if bonus else BLUE)
 
     def pick(self, fn):
         if self.running():
@@ -965,6 +973,12 @@ class App:
         self.log_follow = float(last) >= 0.999
         self.cv.itemconfigure(self.latest_btn.sprite.id, state="hidden" if self.log_follow else "normal")
 
+    def clear_log(self):
+        self.log.configure(state="normal")
+        self.log.delete("1.0", "end")
+        self.log.configure(state="disabled")
+        self.log_follow = True
+
     def jump_latest(self):
         self.log.see("end")
         self.log.xview_moveto(0)
@@ -1021,9 +1035,9 @@ class App:
 
     def current_script(self):
         for line in reversed(tail(WATCH_LOG, 40)):
-            m = re.search(r"starting farm .*?(\w+\.py)", line)
+            m = re.search(r"starting farm .*?(\w+\.py)(?:.*? @(easy|medium|hard))?", line)
             if m:
-                return m.group(1)
+                return m.group(1) + (f"@{m.group(2)}" if m.group(2) else "")
         return None
 
     def refresh_tiles(self, playing=None):
@@ -1033,9 +1047,23 @@ class App:
             bonus_name = open(BONUS_FILE, encoding="utf-8").read().strip()
         except OSError:
             bonus_name = None
-        for fn, t in self.tiles.items():
-            t.set_state(chosen=not bonus and fn == self.prefs.get("map"), playing=fn == playing,
-                        locked=t.info[1] in skip, bonus=bonus and BONUS_PLAYS.get(bonus_name) == fn)
+        for key, c in self.cells.items():
+            c.set_state(chosen=not bonus and key == self.prefs.get("map"), playing=key == playing,
+                        locked=ENTRIES[key][0] in skip)
+        for name, spr in self.row_names.items():
+            on = playing is not None and ENTRIES.get(playing, (None,))[0] == name
+            st = (name in skip, bonus and name == bonus_name, on)
+            spr.show((name,) + st, lambda n=name, st=st: self.row_label(n, *st))
+
+    def row_label(self, name, locked, star_on, on):
+        t = text_img(name, 18, fill="#9aa7bd" if locked else GOLD if on else "white", max_w=170)
+        if not star_on:
+            return t
+        s_ = star(20)
+        im = Image.new("RGBA", (t.width + 6 + s_.width, max(t.height, s_.height)), (0, 0, 0, 0))
+        im.alpha_composite(t, (0, (im.height - t.height) // 2))
+        im.alpha_composite(s_, (t.width + 6, (im.height - s_.height) // 2))
+        return im
 
     def refresh(self):
         try:
@@ -1088,9 +1116,8 @@ class App:
             self.stats[k].show(v, lambda k=k, v=v: text_img(v, 32, fill=colors[k], max_w=124))
 
         playing = self.current_script() if on else None
-        info = next((m for m in MAPS if m[0] == (playing or (None if self.prefs["mode"] == "bonus"
-                                                              else self.prefs.get("map")))), None)
-        title = f"{info[1]} · {info[2]}".upper() if info else "BONUS MAP"
+        info = ENTRIES.get(playing or (None if self.prefs["mode"] == "bonus" else self.prefs.get("map")))
+        title = f"{info[0]} · {info[1]}".upper() if info else "EVENT MODE"
         self.now_map.show(title, lambda: text_img(title, 34, max_w=530))
         s = (status or "").capitalize() if on else "Not running"
         self.now_status.show(s, lambda: text_img(s, 17, fill=CREAM, sw=0, shadow=False, max_w=530))

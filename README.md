@@ -28,9 +28,9 @@ The app checks for an update every time it opens and installs it by itself (pres
 ## Play
 
 1. Open BTD6 and go to the home screen.
-2. Double-click **Autofarm.exe**. Pick **Bonus map** (the map with **bonus rewards** in the candy event; it switches maps by itself) or a map, then press **Start**. BTD6 closed? Start opens it first.
+2. Double-click **Autofarm.exe**. Turn on **Event mode** (it plays the map with **bonus rewards** in the candy event and switches maps by itself) or pick a map, then press **Start**. BTD6 closed? Start opens it first.
 
-Or double-click **farm\Play.bat** to start the bonus map without the app.
+Or double-click **farm\Play.bat** to start event mode without the app.
 
 Want one map only? Pick it in the app, or open a terminal in the **farm** folder and type (swap the file for any map below):
 

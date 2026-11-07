@@ -26,6 +26,9 @@ PROGRESS_LIMIT = 30 * 60
 ARGS = [a for a in sys.argv[1:] if a.lower() != "afk"]
 AFK = len(ARGS) < len(sys.argv) - 1     # `watchdog.py <map> afk`: tab back into BTD6 by itself
 SCRIPT = ARGS[0] if ARGS else "infernal_easy.py"   # or any map script, or "bonus"
+# `<map>_impop.py@easy` (or @medium / @hard): that Impoppable build on Standard
+SCRIPT, _, DIFF = SCRIPT.partition("@")
+DIFF = DIFF.lower() if DIFF.lower() in ("easy", "medium", "hard") else ""
 MAX_IMPOP_LOSSES = None   # user: stay on Impoppable (set a number to fall back to Deflation)
 IMPOP_WIN_DEADLINE = None      # user: no time-based switch either
 
@@ -116,7 +119,7 @@ def start_farm(extra=()):
     fresh = time.time() - st.get("heartbeat", 0) < HEARTBEAT_LIMIT
     if fresh and st.get("running") and user32.FindWindowW(None, "BloonsTD6"):
         args.append("--running")        # towers are already down in this game
-    log("starting farm " + " ".join(args[3:]))
+    log("starting farm " + " ".join(args[3:]) + (f" @{DIFF}" if DIFF and not BONUS else ""))
     try:                                # keep farm.log small: past 5 MB it becomes farm.log.old
         if os.path.getsize(FARM_LOG) > 5 * 1024 * 1024:
             os.replace(FARM_LOG, FARM_LOG + ".old")
@@ -128,6 +131,8 @@ def start_farm(extra=()):
         env["BTD6_ONE_GAME"] = "1"      # one game on a stand-in map, then back to the bonus
     elif BONUS:
         env["BTD6_BONUS"] = "1"
+    if DIFF and not BONUS:
+        env["BTD6_DIFF"] = DIFF
     return subprocess.Popen(args, cwd=HERE, stdout=out, stderr=subprocess.STDOUT, env=env,
                             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
 
