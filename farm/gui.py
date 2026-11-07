@@ -591,7 +591,7 @@ class App:
         self.build()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.refresh()
-        self.root.after(1500, lambda: self.check_update(auto=True))    # on open: update by itself
+        self.root.after(1500, self.check_update)    # on open: update by itself
         self.root.after(self.CHECK_EVERY, self.check_often)
 
     def static(self, img, x, y, anchor="nw"):
@@ -696,6 +696,17 @@ class App:
         self.root.bind("<KeyPress>", self.on_key)
         self.paint_keys()
         self.paint_mode()
+
+    # ---------------------------------------------------------------- keybinds
+    KEY_DEFAULT = {"pause": "Numpad1", "stop": "Numpad0", "afk": "Numpad2"}
+    # Tk's key names -> the names settings.json (keys.py) takes. Only keys BTD6 doesn't use:
+    # letters, digits and , . / are tower and upgrade hotkeys in the game.
+    TK_KEYS = {**{f"KP_{i}": f"Numpad{i}" for i in range(10)}, **{f"F{i}": f"F{i}" for i in range(1, 25)},
+               "KP_Insert": "Insert", "KP_End": "End", "KP_Home": "Home", "KP_Prior": "PageUp",
+               "KP_Next": "PageDown", "KP_Delete": "Delete", "KP_Up": "Up", "KP_Down": "Down",
+               "KP_Left": "Left", "KP_Right": "Right", "Insert": "Insert", "Delete": "Delete",
+               "Home": "Home", "End": "End", "Prior": "PageUp", "Next": "PageDown", "Pause": "Pause",
+               "Scroll_Lock": "ScrollLock", "Up": "Up", "Down": "Down", "Left": "Left", "Right": "Right"}
 
     def keys(self):
         return {**self.KEY_DEFAULT, **{k: v for k, v in read_json(os.path.join(HERE, "settings.json"), {}).items()
@@ -827,10 +838,10 @@ class App:
 
     CHECK_EVERY = 5 * 3600 * 1000           # ms between quiet checks while the app is open
 
-    def background(self, job, then):
+    def background(self, job, then, label):
         """Run job() (code, msg) off the UI thread, then then(code, msg) on it."""
         self.updating = True
-        self.update_btn.set("...", enabled=False)
+        self.update_btn.set(label, BLUE, enabled=False)
 
         def run():
             try:
@@ -840,29 +851,33 @@ class App:
             self.root.after(0, lambda: then(code, msg))
         threading.Thread(target=run, daemon=True).start()
 
-    def show_update_btn(self):
+    def show_update_btn(self, label=None):
         if self.restart_ready:
             self.update_btn.set("RESTART", GREEN, enabled=True)
         elif self.update_ready:
             self.update_btn.set("UPDATE", GREEN, enabled=True)
         else:
-            self.update_btn.set("CHECK UPDATE", BLUE, enabled=True)
+            self.update_btn.set(label or "CHECK UPDATE", BLUE, enabled=True)
 
     def do_update(self):
         if self.updating:
             return
         if self.restart_ready:
             return self.restart()
-        if not self.update_ready:
-            return self.check_update()
+        if self.update_ready:
+            return self.install()
+        self.check_update()
+
+    def install(self):
         if self.running():
+            self.show_update_btn()
             return self.toast("Stop the farm first, then press UPDATE.")
         import updater
-        self.background(updater.update, self.update_done)
+        self.background(updater.update, self.update_done, "UPDATING...")
 
-    def check_update(self, auto=False):
-        """auto: the check when the app opens. An update found then installs and reopens the app
-        by itself (unless the farm is running: then the button just turns green)."""
+    def check_update(self, install=True):
+        """CHECKING... -> UP TO DATE, or straight into UPDATING... when there is one.
+        install=False (the 5-hourly check): just turn the button into a green UPDATE."""
         if self.updating:
             return
         import updater
@@ -871,29 +886,31 @@ class App:
             self.updating = False
             if code == 3:
                 self.update_ready = True
-                if auto and not self.running():
-                    self.toast("Updating...")
-                    return self.background(updater.update, lambda c, m: self.update_done(c, m, auto=True))
-            elif auto is False:      # only a press says "Up to date"
-                self.toast(msg)
+                if install and not self.running():
+                    return self.install()
+                return self.show_update_btn()
+            if code == 0:
+                return self.show_update_btn("UP TO DATE")
             self.show_update_btn()
-        self.background(updater.check, done)
+            if install:
+                self.toast(msg)
+        self.background(updater.check, done, "CHECKING...")
 
     def check_often(self):
         if not (self.update_ready or self.restart_ready):
-            self.check_update(auto=None)    # quiet, and never installs by itself
+            self.check_update(install=False)
         self.root.after(self.CHECK_EVERY, self.check_often)
 
-    def update_done(self, code, msg, auto=False):
+    def update_done(self, code, msg):
         self.updating = False
-        if code == 2:                       # new files are in
+        if code == 2:                       # new files are in: reopen on them
             self.update_ready, self.restart_ready = False, True
-            if auto and not self.running():
-                return self.restart()       # on open: straight into the new version
-            self.show_update_btn()
-            return self.toast("Updated. Press RESTART to use the new version.")
+            if not self.running():
+                return self.restart()
+            return self.show_update_btn()
         if code == 0:
             self.update_ready = False
+            return self.show_update_btn("UP TO DATE")
         self.show_update_btn()
         self.toast(msg)
 

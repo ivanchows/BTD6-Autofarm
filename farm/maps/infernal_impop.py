@@ -566,8 +566,10 @@ def try_op(op):
             TMODE[repr(pos)] = 0        # a new tower: on its cycle's first targeting mode
         elif result == "nocash" and key == HERO_KEY and (has_tower(pos) or (read_cash() or 0) >= 2500):
             done = True         # a hero places once: with it standing, its key shows no ghost.
-            print("already standing:", label)   # The panel check can miss him after a restart:
-                                                # no ghost with his price in hand means he's out
+            print("already standing:", label)   # The panel check can miss a hero after a restart
+                                                # (every map's hero goes through here, key "u"):
+                                                # no ghost with $2,500 in hand (above any hero's
+                                                # price) means it's out
         elif result == "blocked":
             FAILS[label] = FAILS.get(label, 0) + 1
             if isinstance(pos, Spot) and FAILS[label] >= len(pos.cands) and key != SNIPER_KEY                     and has_tower(pos):
