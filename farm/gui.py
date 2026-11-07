@@ -627,6 +627,9 @@ class App:
             self.prefs["mode"] = "bonus"
         if self.prefs.get("map") not in {m[0] for m in MAPS}:
             self.prefs["map"] = "infernal_impop.py"
+        if not isinstance(self.prefs.get("autostart"), bool):   # first run: take what Windows has
+            self.prefs["autostart"] = autostart_on()
+        set_autostart(self.prefs["autostart"])  # Windows follows the saved setting (and this folder)
         self.proc = None
         self.stop_at = None
         self.updating = False
@@ -635,8 +638,6 @@ class App:
         self.build()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.refresh()
-        if autostart_on():                  # the folder may have moved: keep the entry pointing here
-            set_autostart(True)
         if "--autostart" in sys.argv:       # opened at Windows sign-in: start farming
             if not self.running():
                 self.root.after(3000, self.on_start)
@@ -741,12 +742,15 @@ class App:
 
     # ---------------------------------------------------------------- autostart (top right)
     def paint_autostart(self):
-        on = autostart_on()
+        on = bool(self.prefs.get("autostart"))
         self.autostart_btn.set("AUTOSTART ON" if on else "AUTOSTART OFF", GREEN if on else GREY)
 
     def flip_autostart(self):
-        if not set_autostart(not autostart_on()):
-            self.toast("Couldn't change autostart.")
+        on = not self.prefs.get("autostart")
+        if not set_autostart(on):
+            return self.toast("Couldn't change autostart.")
+        self.prefs["autostart"] = on
+        self.save_prefs()
         self.paint_autostart()
 
     # ---------------------------------------------------------------- keybinds
