@@ -62,6 +62,7 @@ def upgrade(spot, path):
 
 def setup():
     print("placing towers")
+    F.STATS["status"] = "placing towers"
     I.SEL["pos"] = None
     for b in BUILD:
         if b == START:
@@ -79,6 +80,7 @@ def setup():
     I.deselect()
     F.STATS["next"] = "done"    # nothing left to do until the game ends: no clicks, no mouse moves
     print("running, cash", I.read_cash())
+    F.STATS["status"] = "running"
 
 
 OBYN_TILE = (103, 414)          # hero list: row 2, column 1

@@ -64,6 +64,7 @@ def tower(key, spot, path):
 
 def setup():
     print("placing towers")
+    F.STATS["status"] = "placing towers"
     I.SEL["pos"] = None
     BUC.i = SUB.i = WIZARD.i = 0
     tower(BUC_KEY, BUC, (4, 2, 0))
@@ -73,6 +74,7 @@ def setup():
     I.deselect()
     F.STATS["next"] = "done"    # nothing left to do until the game ends: no clicks, no mouse moves
     print("running, cash", I.read_cash())
+    F.STATS["status"] = "running"
 
 
 F.setup = setup

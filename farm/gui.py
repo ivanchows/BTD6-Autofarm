@@ -1103,6 +1103,8 @@ class App:
             self.stats[k].show(v, lambda k=k, v=v: text_img(v, 32, fill=colors[k], max_w=124))
 
         playing = self.current_script() if on else None
+        if status == "checking the event":      # this farm may not be the event's map: don't name it yet
+            playing = None
         info = ENTRIES.get(playing or (None if self.prefs["mode"] == "bonus" else self.prefs.get("map")))
         title = f"{info[0]} · {info[1]}".upper() if info else "EVENT MODE"
         self.now_map.show(title, lambda: text_img(title, 34, max_w=530))

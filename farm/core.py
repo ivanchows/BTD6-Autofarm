@@ -1118,9 +1118,12 @@ def nav_to(map_name, difficulty_btn, mode_btn, final=None):
     MODE_BTN["btn"] = tuple(mode_btn)
     STATS["status"] = f"loading {map_name}"
     if BONUS:                           # the Collection Event's bonus map instead of the Expert list
+        STATS["status"] = "checking the event"      # this farm's map may not be the event's
+        save_state(False)
         got = bonus_open(map_name)
         if not got:
             return
+        STATS["status"] = f"loading {map_name}"
         tile = BONUS_TILE if got is True else expert_open(map_name)
         if tile is None:
             return

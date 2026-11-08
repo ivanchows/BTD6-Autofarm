@@ -61,6 +61,7 @@ def upgrade(spot, path):
 
 def setup():
     print("placing towers")
+    F.STATS["status"] = "placing towers"
     I.SEL["pos"] = None
     S.SELNAME["n"] = None
     for key, spot, path in BUILD:
@@ -75,6 +76,7 @@ def setup():
     I.start_round()
     F.STATS["next"] = "done"    # nothing left to do until the game ends: no clicks, no mouse moves
     print("running, cash", I.read_cash())
+    F.STATS["status"] = "running"
 
 
 F.setup = setup
