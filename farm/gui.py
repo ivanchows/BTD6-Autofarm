@@ -685,6 +685,13 @@ class App:
         self.now_status = Sprite(cv, RX + 42, RY + 186)
         self.now_next = Sprite(cv, RX + 42, RY + 210)
         self.now_reload = Sprite(cv, RX + RW - 40, RY + 190, anchor="ne")    # next BTD6 reload, local time
+        tip = text_img("Steam only", 14, fill=CREAM, sw=0, shadow=False)        # it reopens BTD6 through Steam
+        tip = compose(plate(tip.width + 20, 30, fill="#0f2c66"), (tip, "center"))
+        self.reload_tip = Sprite(cv, RX + RW - 40, RY + 214, anchor="ne")
+        self.reload_tip.show("tip", lambda: tip)
+        cv.itemconfigure(self.reload_tip.id, state="hidden")
+        cv.tag_bind(self.now_reload.id, "<Enter>", lambda e: cv.itemconfigure(self.reload_tip.id, state="normal"))
+        cv.tag_bind(self.now_reload.id, "<Leave>", lambda e: cv.itemconfigure(self.reload_tip.id, state="hidden"))
 
         cy = RY + 262
         self.start_btn = Button(self, RX + 22, cy, 250, 76, self.on_start, size=38)

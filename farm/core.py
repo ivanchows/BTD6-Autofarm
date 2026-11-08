@@ -162,6 +162,18 @@ def relaunch():
         os._exit(1)
     global _grace_until
     _grace_until = time.time() + 180   # loading: no gone/frozen verdicts for 3 minutes
+    # the start screen: press START (bottom middle) until it's gone (user, 2026-11-08)
+    pressed = False
+    for _ in range(60):                 # up to ~3 minutes of loading
+        if in_front():
+            im = grab()
+            if matches(im, TITLE):
+                print("start screen -> START")
+                click(*START_BTN)
+                pressed = True
+            elif pressed or matches(im, HOME):
+                break                   # past it: the main loop handles any popups
+        time.sleep(3)
 
 
 _gone_since = None
