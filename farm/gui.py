@@ -41,7 +41,7 @@ W, H = 1120, 740
 
 BONUS_PLAYS = {  # map -> the farm bonus mode plays there (watchdog.BONUS_SCRIPTS)
     "Infernal": "infernal_impop.py", "Flooded Valley": "flooded_easy.py",
-    "Sanctuary": "sanctuary_deflation.py", "Ravine": "ravine_deflation.py",
+    "Sanctuary": "sanctuary_deflation.py", "Ravine": "ravine_deflation.py",     # Sanctuary: Deflation (user)
     "Quad": "quad_easy.py", "Workshop": "workshop_easy.py", "Dark Dungeons": "dark_dungeons_easy.py",
     "Bloody Puddles": "bloody_puddles_easy.py", "Tricky Tracks": "tricky_tracks_easy.py",
     "#Ouch": "ouch_easy.py", "Dark Castle": "dark_castle_impop.py",
@@ -51,6 +51,7 @@ MAPS = [  # file, map, mode, hero (Infernal is Impoppable only: user, 2026-11-05
     ("flooded_easy.py", "Flooded Valley", "Deflation", None),
     ("sanctuary_deflation.py", "Sanctuary", "Deflation", "Obyn"),
     ("ravine_deflation.py", "Ravine", "Deflation", "Obyn"),
+    ("infernal_easy.py", "Infernal", "Deflation", None),
     ("quad_easy.py", "Quad", "Easy", "Etienne"),
     ("workshop_easy.py", "Workshop", "Easy", "Sauda"),
     ("dark_dungeons_easy.py", "Dark Dungeons", "Easy", "Obyn"),

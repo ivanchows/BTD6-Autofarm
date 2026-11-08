@@ -59,14 +59,19 @@ def stop_pressed():
 # `watchdog.py bonus`: play whichever Expert map has the Collection Event's bonus rewards.
 # The farm reads the bonus map off the event screen; if it isn't its own map, it writes the
 # name to bonus_map.txt and exits, and the next start picks that map's farm.
-BONUS_SCRIPTS = {
-    "Infernal": "infernal_impop.py", "Flooded Valley": "flooded_easy.py",     # user: Infernal on Impoppable only
-    "Sanctuary": "sanctuary_deflation.py", "Ravine": "ravine_deflation.py",
-    "Quad": "quad_easy.py", "Workshop": "workshop_easy.py", "Dark Dungeons": "dark_dungeons_easy.py",
-    "Bloody Puddles": "bloody_puddles_easy.py", "Tricky Tracks": "tricky_tracks_easy.py",
-    "#Ouch": "ouch_easy.py", "Dark Castle": "dark_castle_impop.py",
-    "Muddy Puddles": "muddy_puddles_impop.py", "Glacial Trail": "glacial_trail_impop.py",
+# Each map's farms, best first: Impoppable, then Easy Standard, then Deflation as a last resort
+# (user, 2026-11-07). Event mode plays the first one.
+BONUS_CHOICES = {
+    "Infernal": ["infernal_impop.py", "infernal_easy.py"],
+    "Sanctuary": ["sanctuary_deflation.py"],        # user: Sanctuary on Deflation (2026-11-07)
+    "Dark Castle": ["dark_castle_impop.py"], "Muddy Puddles": ["muddy_puddles_impop.py"],
+    "Glacial Trail": ["glacial_trail_impop.py"],
+    "Quad": ["quad_easy.py"], "Workshop": ["workshop_easy.py"], "Dark Dungeons": ["dark_dungeons_easy.py"],
+    "Bloody Puddles": ["bloody_puddles_easy.py"], "Tricky Tracks": ["tricky_tracks_easy.py"],
+    "#Ouch": ["ouch_easy.py"],
+    "Flooded Valley": ["flooded_easy.py"], "Ravine": ["ravine_deflation.py"],
 }
+BONUS_SCRIPTS = {m: c[0] for m, c in BONUS_CHOICES.items()}
 BONUS = SCRIPT.lower() == "bonus"
 
 # A map or hero the player hasn't unlocked: the farm notes it in skipped_maps.json and exits 5.
