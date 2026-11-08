@@ -167,6 +167,53 @@ def relaunch():
 _gone_since = None
 _grace_until = 0.0
 
+RELOAD_AFTER = 2 * 3600     # s: BTD6 gets slow and heavy the longer it runs (user, 2026-11-08)
+
+
+def game_age():
+    """Seconds BTD6 has been running (its process start time), or None."""
+    if not HWND:
+        return None
+    pid = wt.DWORD()
+    user32.GetWindowThreadProcessId(HWND, ctypes.byref(pid))
+    k32 = ctypes.windll.kernel32
+    h = k32.OpenProcess(0x1000, False, pid.value)       # PROCESS_QUERY_LIMITED_INFORMATION
+    if not h:
+        return None
+    try:
+        ft = [wt.FILETIME() for _ in range(4)]
+        if not k32.GetProcessTimes(h, *[ctypes.byref(f) for f in ft]):
+            return None
+        now = wt.FILETIME()
+        k32.GetSystemTimeAsFileTime(ctypes.byref(now))
+        t = lambda f: (f.dwHighDateTime << 32 | f.dwLowDateTime) / 1e7
+        return t(now) - t(ft[0])
+    finally:
+        k32.CloseHandle(h)
+
+
+def reload_if_old():
+    """Between games only (a game just ended): after RELOAD_AFTER, restart BTD6 through Steam.
+    True if it did. The farm then comes back through the start and home screens as after a crash."""
+    age = game_age()
+    if age is None or age < RELOAD_AFTER:
+        return False
+    print(f"BTD6 has run {age / 3600:.1f} h -> reloading it")
+    STATS["status"] = "reloading BTD6"
+    done = threading.Event()
+
+    def beat():             # relaunch can take minutes: the watchdog must not take it for a stall
+        while not done.wait(10):
+            STATS["progress"] = time.time()
+            save_state(False)
+    threading.Thread(target=beat, daemon=True).start()
+    try:
+        save_state(False)
+        relaunch()
+    finally:
+        done.set()
+    return True
+
 
 def game_ok():
     """False after a crash/freeze, once the game has been relaunched. The game swaps its
@@ -1298,6 +1345,9 @@ def farm():
                     sys.stdout.flush()
                     os._exit(6)         # a stand-in map's game is done: check the bonus map again
             STATS["progress"] = time.time()
+            if reload_if_old():
+                running = False
+                continue
             STATS["status"] = "won, heading home"
             click(*NEXT_BTN)
             wait(0.8)
@@ -1313,6 +1363,9 @@ def farm():
                 STATS["losses"] += 1
                 STATS["lost_this_game"] = True
             STATS["progress"] = time.time()
+            if reload_if_old():
+                running = False
+                continue
             STATS["status"] = "lost, restarting"
             click(*RESTART_PAID_BTN)
             wait(0.6)
@@ -1323,6 +1376,9 @@ def farm():
                 STATS["losses"] += 1
                 STATS["lost_this_game"] = True
             STATS["progress"] = time.time()
+            if reload_if_old():
+                running = False
+                continue
             STATS["status"] = "lost, restarting"
             click(*RESTART_BTN)
             wait(0.6)
