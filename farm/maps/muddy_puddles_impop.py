@@ -203,6 +203,7 @@ def pick_psi():
 
 
 F.on_mode_screen = pick_psi
+F.HERO = "Psi"
 F.nav = lambda: F.nav_to("Muddy Puddles", (1290, 420), (1280, 740))     # Hard, Impoppable
 
 if __name__ == "__main__":

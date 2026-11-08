@@ -616,6 +616,7 @@ def setup():
 
 F.setup = setup
 F.on_mode_screen = pick_silas
+F.HERO = "Silas"
 F.nav = lambda: F.nav_to("Glacial Trail", (1290, 420), (1280, 740))     # Hard, Impoppable
 
 if __name__ == "__main__":

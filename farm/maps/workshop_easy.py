@@ -116,6 +116,7 @@ def pick_sauda():
 
 
 F.on_mode_screen = pick_sauda
+F.HERO = "Sauda"
 F.nav = lambda: F.nav_to("Workshop", (625, 420), STANDARD_BTN, final=F.IN_GAME)   # Easy, Standard
 
 if __name__ == "__main__":

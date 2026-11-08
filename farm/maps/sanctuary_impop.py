@@ -368,6 +368,7 @@ def pick_obyn():
 
 
 F.on_mode_screen = pick_obyn
+F.HERO = "Obyn"
 F.nav = lambda: F.nav_to("Sanctuary", (1290, 420), (1280, 740))     # Hard, Impoppable
 
 if __name__ == "__main__":

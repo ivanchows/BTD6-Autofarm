@@ -92,6 +92,7 @@ def pick_quincy():
 
 
 F.on_mode_screen = pick_quincy
+F.HERO = "Quincy"
 F.nav = lambda: F.nav_to("Tricky Tracks", (625, 420), STANDARD_BTN, final=F.IN_GAME)   # Easy, Standard
 
 if __name__ == "__main__":

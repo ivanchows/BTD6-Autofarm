@@ -68,6 +68,7 @@ def pick_obyn():
 
 
 F.on_mode_screen = pick_obyn
+F.HERO = "Obyn"
 F.nav = lambda: F.nav_to("Dark Dungeons", (625, 420), STANDARD_BTN, final=F.IN_GAME)   # Easy, Standard
 
 if __name__ == "__main__":

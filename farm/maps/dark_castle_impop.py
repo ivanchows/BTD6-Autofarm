@@ -298,6 +298,7 @@ def pick_striker():
 I.run_queue = run_queue
 F.setup = setup
 F.on_mode_screen = pick_striker
+F.HERO = "Striker Jones"
 F.nav = lambda: F.nav_to("Dark Castle", (1290, 420), (1280, 740))   # Hard, Impoppable
 F.NAV = [((958, 945), F.MAP_SELECT), ((1335, 975), F.EXPERT_PAGE), ((1645, 430), F.INFERNAL_PAGE),
          ((960, 580), F.DIFFICULTY), ((1290, 420), F.MODE), ((1280, 740), F.DEFLATION_POPUP)]

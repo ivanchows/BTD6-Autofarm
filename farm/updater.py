@@ -23,7 +23,7 @@ NO_WINDOW = 0x08000000
 
 # Your own files stay as they are (settings.json holds your keybinds)
 KEEP_FILES = ["state.json", "state.json.tmp", "overlay_pos.json", "bonus_map.txt", "settings.json", "gui.json",
-              "skipped_maps.json", "glacial_progress.json", "glacial_prices.json", "*.log", "*.log.old",
+              "skipped_maps.json", "hero.txt", "glacial_progress.json", "glacial_prices.json", "*.log", "*.log.old",
               ".version", "Autofarm.exe", "Autofarm.exe.old"]
 KEEP_DIRS = {"losses", "featured", "learned", "__pycache__", ".venv"}
 # Left over from older versions

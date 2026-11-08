@@ -51,6 +51,7 @@ def pick_etienne():
 
 
 F.on_mode_screen = pick_etienne
+F.HERO = "Etienne"
 F.nav = lambda: F.nav_to("Quad", (625, 420), STANDARD_BTN, final=F.IN_GAME)   # Easy, Standard
 F.NAV = [((958, 945), F.MAP_SELECT), ((1335, 975), F.EXPERT_PAGE), ((1645, 430), F.INFERNAL_PAGE),
          ((535, 580), F.DIFFICULTY), ((625, 420), F.MODE), (STANDARD_BTN, F.IN_GAME)]

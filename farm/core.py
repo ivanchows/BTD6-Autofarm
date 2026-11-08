@@ -779,6 +779,27 @@ def on_mode_screen():
     """Called on the difficulty-mode screen before picking a mode. infernal_impop.py checks the hero here."""
 
 
+# The hero the game has selected, as last picked by a farm (hero.txt). A map whose HERO is already
+# selected skips the hero screen, about 15 s (user, 2026-11-08). A hero picked by hand in the game
+# isn't seen: the map plays with it until a map with another hero picks again.
+HERO = None             # a map with a hero sets its name: F.HERO = "Etienne"
+HERO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hero.txt")
+
+
+def hero_now():
+    try:
+        return open(HERO_FILE, encoding="utf-8").read().strip() or None
+    except OSError:
+        return None
+
+
+def mode_screen():
+    if HERO and hero_now() == HERO:
+        print(f"{HERO} is already the hero")
+        return
+    on_mode_screen()
+
+
 # Expert maps (read 2026-11-03). The Expert button opens whichever Expert page was last
 # used, so pages are found by the lit page dot, never assumed.
 EXPERT_DOTS = {1: 1181, 2: 1218, 3: 1255}      # page dot x at y=757
@@ -905,6 +926,11 @@ def hero_select(name):
             wait(1.5)
         skip_map(MAP_NAME, f"hero {name} not unlocked")
     click(*HERO_SELECT_BTN)
+    try:
+        with open(HERO_FILE, "w", encoding="utf-8") as f:
+            f.write(name)
+    except OSError:
+        pass
 
 
 # --- prices (Impoppable), shared by every farm: prices.json -----------------------------------
@@ -1150,7 +1176,7 @@ def nav_to(map_name, difficulty_btn, mode_btn, final=None):
             NAV_FAILS.pop(map_name, None)
         time.sleep(0.3)
         if screen is MODE:
-            on_mode_screen()
+            mode_screen()
     NAV_DONE["t"] = time.time()     # a game opened from the menu is new, whatever round it reads
     if final is DEFLATION_POPUP:
         click(*OK_BTN)
@@ -1179,7 +1205,7 @@ def _old_nav():
             return
         time.sleep(0.3)     # page slides finish after the dot moves
         if screen is MODE:
-            on_mode_screen()
+            mode_screen()
     if final is DEFLATION_POPUP:
         click(*OK_BTN)          # dismiss the Deflation instructions straight away
 

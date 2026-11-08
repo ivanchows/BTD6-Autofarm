@@ -100,6 +100,7 @@ def pick_obyn():
 F.setup = setup
 F.ingame = lambda: None
 F.on_mode_screen = pick_obyn
+F.HERO = "Obyn"
 F.nav = lambda: F.nav_to("Ravine", (625, 420), (1280, 450))       # Easy, Deflation
 
 if __name__ == "__main__":

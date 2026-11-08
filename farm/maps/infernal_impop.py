@@ -725,6 +725,7 @@ def ensure_ben():
 
 
 F.on_mode_screen = ensure_ben
+F.HERO = "Benjamin"
 F.on_defeat = on_defeat
 F.setup = setup
 F.ingame = ingame
