@@ -88,7 +88,7 @@ for _f, _m, _mode, _h in MAPS:
     if _mode in ONLY.get(_f, (_mode,)):
         ENTRIES[_f] = (_m, _mode)
     if _mode == "Impoppable":
-        for _d in ONLY.get(_f, ("Easy", "Medium", "Hard")):
+        for _d in [d for d in ONLY.get(_f, ("Easy", "Medium", "Hard")) if d != "Impoppable"]:
             if not any(m == _m and md == _d for m, md in ENTRIES.values()):
                 ENTRIES[f"{_f}@{_d.lower()}"] = (_m, _d)
 ROWS = sorted({m for m, _ in ENTRIES.values()}, key=lambda m: m.lstrip("#").lower())
@@ -618,6 +618,9 @@ class App:
         self.game_btn = Button(self, 22 + t.width + t2.width + 182, 26, 168, 42, self.open_game, size=17, r=21)
         self.waiting_since = None       # Start pressed with the game closed: when it was opened
         self.update_btn = Button(self, W - 216, 20, 196, 52, self.do_update, size=22)
+        # the farm checks BTD6's Auto Start switch once per launch; off = never opens that menu
+        self.autostart_btn = Button(self, 22 + t.width + t2.width + 362, 26, 132, 42, self.on_autostart,
+                                    size=13, r=21)
         self.update_btn.set("CHECK UPDATE", BLUE)
 
         # left: the maps, on wood like the in-game tower shop
@@ -704,6 +707,7 @@ class App:
         self.root.bind("<KeyPress>", self.on_key)
         self.paint_keys()
         self.paint_mode()
+        self.paint_autostart()
 
     # ---------------------------------------------------------------- keybinds
     KEY_DEFAULT = {"pause": "Numpad1", "stop": "Numpad0", "afk": "Numpad2"}
@@ -798,6 +802,15 @@ class App:
             self.send("afk")
         self.paint_afk(self.prefs["afk"])
 
+    def on_autostart(self):
+        self.prefs["autostart"] = not self.prefs.get("autostart", True)
+        self.save_prefs()
+        self.paint_autostart()
+
+    def paint_autostart(self):
+        on = self.prefs.get("autostart", True)
+        self.autostart_btn.set("AUTO START ON" if on else "AUTO START OFF", GREEN if on else GREY)
+
     def paint_afk(self, on):
         self.afk_btn.set("AFK ON" if on else "AFK OFF", GREEN if on else GREY)
 
@@ -840,6 +853,8 @@ class App:
         if uv:      # the watchdog starts each farm with `uv run`
             env["PATH"] = os.path.dirname(uv) + os.pathsep + env.get("PATH", "")
         env.pop("VIRTUAL_ENV", None)
+        if not self.prefs.get("autostart", True):
+            env["BTD6_NO_AUTOSTART"] = "1"      # don't check BTD6's Auto Start switch
         self.proc = subprocess.Popen(args, cwd=HERE, env=env, creationflags=NO_WINDOW,
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.stop_at = None

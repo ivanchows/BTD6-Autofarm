@@ -732,8 +732,8 @@ AUTO_START = {"checked": os.path.exists(AUTO_START_OK)}
 
 def ensure_auto_start():
     """Once per launch of the farm, in a game: Esc -> pause menu -> Auto Start on -> Continue."""
-    if AUTO_START["checked"] or not in_front() or not matches(grab(), IN_GAME):
-        return
+    if AUTO_START["checked"] or os.environ.get("BTD6_NO_AUTOSTART") or not in_front() or not matches(grab(), IN_GAME):
+        return      # (BTD6_NO_AUTOSTART: the app's AUTO START OFF)
     for _ in range(2):              # the first Esc may only close a tower's panel
         key(0x1B)
         if wait_for(PAUSE, 2):
