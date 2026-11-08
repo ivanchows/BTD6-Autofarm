@@ -866,17 +866,30 @@ class App:
             _ERR.flush()
 
     def hover_note(self, btn, text):
-        """A small note above btn while the mouse is on it."""
+        """A small note above btn while the mouse is on it. Found by polling the mouse (poll_notes),
+        not by Enter/Leave bindings: those froze the app on the user's PC (2026-11-08)."""
         t = text_img(text, 14, fill=CREAM, sw=0, shadow=False)
         img = compose(plate(t.width + 20, 30, fill="#0f2c66"), (t, "center"))
         note = Sprite(self.cv, btn.x + btn.w // 2, btn.y - 6, anchor="s")
         note.show(text, lambda: img)
         self.cv.itemconfigure(note.id, state="hidden")
-        for seq, state in (("<Enter>", "normal"), ("<Leave>", "hidden")):
-            # (no tag_raise here: re-stacking under the mouse made Tk fire Leave/Enter forever: the
-            # button flickered like mad clicking and the app froze. The note is drawn last anyway.)
-            self.cv.tag_bind(btn.sprite.id, seq, lambda e, s=state: self.cv.itemconfigure(note.id, state=s),
-                             add="+")
+        if not getattr(self, "notes", None):
+            self.notes = []
+            self.root.after(125, self.poll_notes)
+        self.notes.append([btn, note.id, False])
+
+    def poll_notes(self):
+        try:
+            mx = self.root.winfo_pointerx() - self.cv.winfo_rootx()
+            my = self.root.winfo_pointery() - self.cv.winfo_rooty()
+            for n in self.notes:
+                btn, nid, shown = n
+                over = btn.x <= mx < btn.x + btn.w and btn.y <= my < btn.y + btn.h
+                if over != shown:
+                    self.cv.itemconfigure(nid, state="normal" if over else "hidden")
+                    n[2] = over
+        finally:
+            self.root.after(125, self.poll_notes)
 
     def on_reload(self):
         self.prefs["reload"] = not self.prefs.get("reload", True)
