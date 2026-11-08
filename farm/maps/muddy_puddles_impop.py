@@ -73,7 +73,7 @@ I.NAME.pop(repr(PSI), None)      # his purple skin title fails the name check; h
 # panel after clicking it is its own (tiers are still checked off the pips).
 I.NAME.pop(repr(SNIPER), None)
 # Abilities: (round, seconds into it, key). Timings from the guide's cues, untested.
-ABILITIES = [(76, 10, "2"), (80, 12, "2"), (98, 20, "2"), (100, 8, "3")]
+ABILITIES = [(76, 0, "1"), (76, 0, "3"), (76, 10, "2"), (80, 12, "2"), (98, 20, "2"), (100, 8, "3")]
 
 D.MAULER_SPOTS = []
 D.DONE_AFTER = 98
