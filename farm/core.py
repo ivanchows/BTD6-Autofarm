@@ -207,6 +207,8 @@ def game_age():
 def reload_if_old():
     """Between games only (a game just ended): after RELOAD_AFTER, restart BTD6 through Steam.
     True if it did. The farm then comes back through the start and home screens as after a crash."""
+    if os.environ.get("BTD6_NO_RELOAD"):       # the app's RELOAD OFF
+        return False
     age = game_age()
     if age is None or age < RELOAD_AFTER:
         return False

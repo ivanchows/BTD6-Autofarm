@@ -684,14 +684,17 @@ class App:
         self.now_map = Sprite(cv, RX + 40, RY + 140)
         self.now_status = Sprite(cv, RX + 42, RY + 186)
         self.now_next = Sprite(cv, RX + 42, RY + 210)
-        self.now_reload = Sprite(cv, RX + RW - 40, RY + 190, anchor="ne")    # next BTD6 reload, local time
+        # reload BTD6 every 2 h (core.RELOAD_AFTER) on/off, and when the next one is (local time)
+        self.reload_btn = Button(self, RX + RW - 172, RY + 140, 132, 36, self.on_reload, size=14, r=18)
+        self.now_reload = Sprite(cv, RX + RW - 40, RY + 190, anchor="ne")
         tip = text_img("Steam only", 14, fill=CREAM, sw=0, shadow=False)        # it reopens BTD6 through Steam
         tip = compose(plate(tip.width + 20, 30, fill="#0f2c66"), (tip, "center"))
-        self.reload_tip = Sprite(cv, RX + RW - 40, RY + 214, anchor="ne")
+        self.reload_tip = Sprite(cv, RX + RW - 182, RY + 143, anchor="ne")     # left of the button
         self.reload_tip.show("tip", lambda: tip)
         cv.itemconfigure(self.reload_tip.id, state="hidden")
-        cv.tag_bind(self.now_reload.id, "<Enter>", lambda e: cv.itemconfigure(self.reload_tip.id, state="normal"))
-        cv.tag_bind(self.now_reload.id, "<Leave>", lambda e: cv.itemconfigure(self.reload_tip.id, state="hidden"))
+        for item in (self.reload_btn.sprite.id, self.now_reload.id):
+            cv.tag_bind(item, "<Enter>", lambda e: cv.itemconfigure(self.reload_tip.id, state="normal"), add="+")
+            cv.tag_bind(item, "<Leave>", lambda e: cv.itemconfigure(self.reload_tip.id, state="hidden"), add="+")
 
         cy = RY + 262
         self.start_btn = Button(self, RX + 22, cy, 250, 76, self.on_start, size=38)
@@ -743,6 +746,7 @@ class App:
         self.paint_keys()
         self.paint_mode()
         self.paint_autostart()
+        self.paint_reload()
 
     # ---------------------------------------------------------------- keybinds
     KEY_DEFAULT = {"pause": "Numpad1", "stop": "Numpad0", "afk": "Numpad2"}
@@ -846,6 +850,17 @@ class App:
         on = self.prefs.get("autostart", True)
         self.autostart_btn.set("AUTO START ON" if on else "AUTO START OFF", GREEN if on else GREY)
 
+    def on_reload(self):
+        self.prefs["reload"] = not self.prefs.get("reload", True)
+        self.save_prefs()
+        self.paint_reload()
+        if self.running():
+            self.toast("Takes effect the next time you press START.")
+
+    def paint_reload(self):
+        on = self.prefs.get("reload", True)
+        self.reload_btn.set("RELOAD ON" if on else "RELOAD OFF", GREEN if on else GREY)
+
     def paint_afk(self, on):
         self.afk_btn.set("AFK ON" if on else "AFK OFF", GREEN if on else GREY)
 
@@ -890,6 +905,8 @@ class App:
         env.pop("VIRTUAL_ENV", None)
         if not self.prefs.get("autostart", True):
             env["BTD6_NO_AUTOSTART"] = "1"      # don't check BTD6's Auto Start switch
+        if not self.prefs.get("reload", True):
+            env["BTD6_NO_RELOAD"] = "1"         # never reload BTD6 every 2 h
         self.proc = subprocess.Popen(args, cwd=HERE, env=env, creationflags=NO_WINDOW,
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.stop_at = None
@@ -1183,20 +1200,20 @@ class App:
             playing = None
         info = ENTRIES.get(playing or (None if self.prefs["mode"] == "bonus" else self.prefs.get("map")))
         title = f"{info[0]} · {info[1]}".upper() if info else "EVENT MODE"
-        self.now_map.show(title, lambda: text_img(title, 34, max_w=530))
+        self.now_map.show(title, lambda: text_img(title, 34, max_w=400))     # room for RELOAD ON
         s = (status or "").capitalize() if on else "Not running"
         self.now_status.show(s, lambda: text_img(s, 17, fill=CREAM, sw=0, shadow=False, max_w=530))
         nxt = stats.get("next") if on else None
         n = f"NEXT: {nxt}" if nxt else ""
         self.now_next.show(n, lambda: text_img(n, 20, fill=GOLD, max_w=530) if n
                            else Image.new("RGBA", (1, 1)))
-        t0 = game_started() if on else None
+        t0 = game_started() if on and self.prefs.get("reload", True) else None
         if t0 is None:
             r = ""
         elif time.time() >= t0 + RELOAD_AFTER:
-            r = "RELOAD AFTER THIS GAME"
+            r = "AFTER THIS GAME"
         else:       # the PC's own clock and time zone
-            r = "RELOAD " + time.strftime("%I:%M %p", time.localtime(t0 + RELOAD_AFTER)).lstrip("0")
+            r = "NEXT " + time.strftime("%I:%M %p", time.localtime(t0 + RELOAD_AFTER)).lstrip("0")
         self.now_reload.show(r, lambda: text_img(r, 15, fill=CREAM, sw=0, shadow=False) if r
                              else Image.new("RGBA", (1, 1)))
         self.refresh_tiles(playing)
