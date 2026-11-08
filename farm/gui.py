@@ -25,6 +25,8 @@ from tkinter import ttk
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageTk
 
+OPENED = time.time()        # when this copy of the app was loaded
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(HERE, "state.json")
 FARM_LOG = os.path.join(HERE, "farm.log")
@@ -896,11 +898,26 @@ class App:
                     return self.install()
                 return self.show_update_btn()
             if code == 0:
+                if install and self.files_changed():     # already on disk, just not loaded yet
+                    return self.update_done(2, "")
                 return self.show_update_btn("UP TO DATE")
             self.show_update_btn()
             if install:
                 self.toast(msg)
         self.background(updater.check, done, "CHECKING...")
+
+    APP_FILES = ("gui.py", "keys.py", "updater.py")     # what the open app has loaded
+
+    def files_changed(self):
+        """The app's own files changed since it opened (a git pull, an edit): reopen to load them.
+        The farms themselves load fresh every start, so only these matter."""
+        for f in self.APP_FILES:
+            try:
+                if os.path.getmtime(os.path.join(HERE, f)) > OPENED:
+                    return True
+            except OSError:
+                pass
+        return False
 
     def check_often(self):
         if not (self.update_ready or self.restart_ready):
