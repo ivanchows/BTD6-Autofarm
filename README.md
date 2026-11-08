@@ -62,24 +62,27 @@ It only clicks while BTD6 is on your screen. Tab out and it waits, so you can do
 
 ## Maps
 
-| File | Map | Mode | Hero |
+| Map | File | Modes | Hero |
 |---|---|---|---|
-| `infernal_easy.py` | Infernal | Easy, Deflation | none |
-| `flooded_easy.py` | Flooded Valley | Easy, Deflation | none |
-| `sanctuary_deflation.py` | Sanctuary | Easy, Deflation | Obyn |
-| `ravine_deflation.py` | Ravine | Easy, Deflation | Obyn |
-| `quad_easy.py` | Quad | Easy | Etienne |
-| `workshop_easy.py` | Workshop | Easy | Sauda |
-| `dark_dungeons_easy.py` | Dark Dungeons | Easy | Obyn |
-| `bloody_puddles_easy.py` | Bloody Puddles | Easy | none |
-| `tricky_tracks_easy.py` | Tricky Tracks | Easy | Quincy |
-| `ouch_easy.py` | #Ouch | Easy | none |
-| `infernal_impop.py` | Infernal | Impoppable | Benjamin |
-| `flooded_valley_impop.py` | Flooded Valley | Easy, Medium (`@easy`, `@medium`) | Etienne |
-| `dark_castle_impop.py` | Dark Castle | Impoppable | Striker Jones |
-| `muddy_puddles_impop.py` | Muddy Puddles | Impoppable | Psi |
-| `glacial_trail_impop.py` | Glacial Trail | Impoppable | Silas |
-| `sanctuary_impop.py` | Sanctuary | Impoppable | Obyn |
+| Infernal | `infernal_impop.py` | Impoppable ★, Hard, Medium, Easy | Benjamin |
+| Infernal | `infernal_easy.py` | Deflation | none |
+| Flooded Valley | `flooded_valley_impop.py` | Easy ★, Medium | Etienne |
+| Flooded Valley | `flooded_easy.py` | Deflation | none |
+| Sanctuary | `sanctuary_impop.py` | Impoppable, Hard, Medium, Easy | Obyn |
+| Sanctuary | `sanctuary_deflation.py` | Deflation ★ | Obyn |
+| Ravine | `ravine_deflation.py` | Deflation ★ | Obyn |
+| Dark Castle | `dark_castle_impop.py` | Impoppable ★, Hard, Medium, Easy | Striker Jones |
+| Muddy Puddles | `muddy_puddles_impop.py` | Impoppable ★, Hard, Medium, Easy | Psi |
+| Glacial Trail | `glacial_trail_impop.py` | Impoppable ★, Hard, Medium, Easy | Silas |
+| Quad | `quad_easy.py` | Easy ★ | Etienne |
+| Workshop | `workshop_easy.py` | Easy ★ | Sauda |
+| Dark Dungeons | `dark_dungeons_easy.py` | Easy ★ | Obyn |
+| Bloody Puddles | `bloody_puddles_easy.py` | Easy ★ | none |
+| Tricky Tracks | `tricky_tracks_easy.py` | Easy ★ | Quincy |
+| #Ouch | `ouch_easy.py` | Easy ★ | none |
+
+★ = what Event mode plays on that map. Easy, Medium and Hard are Standard games.
+From a terminal, add the mode to an Impoppable file: `uv run watchdog.py flooded_valley_impop.py@easy`.
 
 ## Heroes you need
 
