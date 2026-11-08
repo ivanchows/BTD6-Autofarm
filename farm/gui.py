@@ -860,12 +860,16 @@ class App:
         threading.Thread(target=run, daemon=True).start()
 
     def show_update_btn(self, label=None):
+        """The button always names what a press does: CHECK UPDATE, UPDATE, RESTART. A check's
+        result (UP TO DATE) shows for 3 s, then it's CHECK UPDATE again (user, 2026-11-08)."""
         if self.restart_ready:
             self.update_btn.set("RESTART", GREEN, enabled=True)
         elif self.update_ready:
             self.update_btn.set("UPDATE", GREEN, enabled=True)
         else:
             self.update_btn.set(label or "CHECK UPDATE", BLUE, enabled=True)
+            if label:
+                self.root.after(3000, lambda: None if self.updating else self.show_update_btn())
 
     def do_update(self):
         if self.updating:
