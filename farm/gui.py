@@ -641,13 +641,9 @@ class App:
         self.static(t, 18, 14)
         t2 = text_img("AUTOFARM", 44, sw=2)
         self.static(t2, 22 + t.width, 14)
-        self.pill = Sprite(cv, 22 + t.width + t2.width + 14, 20)
-        self.game_btn = Button(self, 22 + t.width + t2.width + 182, 26, 168, 42, self.open_game, size=17, r=21)
+        self.game_btn = Button(self, 22 + t.width + t2.width + 22, 26, 168, 42, self.open_game, size=17, r=21)
         self.waiting_since = None       # Start pressed with the game closed: when it was opened
         self.update_btn = Button(self, W - 216, 20, 196, 52, self.do_update, size=22)
-        # the farm checks BTD6's Auto Start switch once per launch; off = never opens that menu
-        self.autostart_btn = Button(self, 22 + t.width + t2.width + 362, 26, 132, 42, self.on_autostart,
-                                    size=13, r=21)
         self.update_btn.set("CHECK UPDATE", BLUE)
 
         # left: the maps, on wood like the in-game tower shop
@@ -684,24 +680,23 @@ class App:
         self.now_map = Sprite(cv, RX + 40, RY + 140)
         self.now_status = Sprite(cv, RX + 42, RY + 186)
         self.now_next = Sprite(cv, RX + 42, RY + 210)
-        # reload BTD6 every 2 h (core.RELOAD_AFTER) on/off, and when the next one is (local time)
-        self.reload_btn = Button(self, RX + RW - 172, RY + 140, 132, 36, self.on_reload, size=14, r=18)
-        self.now_reload = Sprite(cv, RX + RW - 40, RY + 190, anchor="ne")
-        tip = text_img("Steam only", 14, fill=CREAM, sw=0, shadow=False)        # it reopens BTD6 through Steam
-        tip = compose(plate(tip.width + 20, 30, fill="#0f2c66"), (tip, "center"))
-        self.reload_tip = Sprite(cv, RX + RW - 182, RY + 143, anchor="ne")     # left of the button
-        self.reload_tip.show("tip", lambda: tip)
-        cv.itemconfigure(self.reload_tip.id, state="hidden")
-        for item in (self.reload_btn.sprite.id, self.now_reload.id):
-            cv.tag_bind(item, "<Enter>", lambda e: cv.itemconfigure(self.reload_tip.id, state="normal"), add="+")
-            cv.tag_bind(item, "<Leave>", lambda e: cv.itemconfigure(self.reload_tip.id, state="hidden"), add="+")
+        self.now_reload = Sprite(cv, RX + RW - 40, RY + 140, anchor="ne")     # next BTD6 reload, local time
 
         cy = RY + 262
-        self.start_btn = Button(self, RX + 22, cy, 250, 76, self.on_start, size=38)
-        self.pause_btn = Button(self, RX + 288, cy, 160, 76, self.on_pause, size=28)
-        self.afk_btn = Button(self, RX + 464, cy, RW - 486, 76, self.on_afk, size=24)
+        self.start_btn = Button(self, RX + 22, cy, 330, 76, self.on_start, size=38)
+        self.pause_btn = Button(self, RX + 368, cy, RW - 390, 76, self.on_pause, size=28)
+        # the toggles, all in one row
+        tw = (RW - 44 - 2 * 12) // 3
+        ty = cy + 92
+        self.afk_btn = Button(self, RX + 22, ty, tw, 42, self.on_afk, size=17, r=16)
+        # the farm checks BTD6's Auto Start switch once per launch; off = never opens that menu
+        self.autostart_btn = Button(self, RX + 22 + tw + 12, ty, tw, 42, self.on_autostart, size=17, r=16)
+        # reload BTD6 every 2 h (core.RELOAD_AFTER)
+        self.reload_btn = Button(self, RX + 22 + 2 * (tw + 12), ty, tw, 42, self.on_reload, size=17, r=16)
+        self.hover_note(self.afk_btn, "Tabs back into the game")
+        self.hover_note(self.reload_btn, "Steam only")       # it reopens BTD6 through Steam
 
-        ly = cy + 100
+        ly = ty + 60
         lh = RY + RH - ly - 70
         self.static(plate(RW - 44, lh, fill="#0f2c66"), RX + 22, ly)
         sty = ttk.Style(self.root)
@@ -849,6 +844,17 @@ class App:
     def paint_autostart(self):
         on = self.prefs.get("autostart", True)
         self.autostart_btn.set("AUTO START ON" if on else "AUTO START OFF", GREEN if on else GREY)
+
+    def hover_note(self, btn, text):
+        """A small note above btn while the mouse is on it."""
+        t = text_img(text, 14, fill=CREAM, sw=0, shadow=False)
+        img = compose(plate(t.width + 20, 30, fill="#0f2c66"), (t, "center"))
+        note = Sprite(self.cv, btn.x + btn.w // 2, btn.y - 6, anchor="s")
+        note.show(text, lambda: img)
+        self.cv.itemconfigure(note.id, state="hidden")
+        for seq, state in (("<Enter>", "normal"), ("<Leave>", "hidden")):
+            self.cv.tag_bind(btn.sprite.id, seq, lambda e, s=state: (self.cv.itemconfigure(note.id, state=s),
+                                                                    self.cv.tag_raise(note.id)), add="+")
 
     def on_reload(self):
         self.prefs["reload"] = not self.prefs.get("reload", True)
@@ -1177,11 +1183,6 @@ class App:
                 self.waiting_since = None
                 self.toast("BTD6 didn't open. Open it, then press START.")
 
-        label, style = (("STOPPING", YELLOW) if stopping else ("PAUSED", YELLOW) if paused
-                        else ("RUNNING", GREEN) if on else ("WAITING", YELLOW) if self.waiting_since
-                        else ("STOPPED", GREY))
-        self.pill.show(label, lambda: compose(btd_button(150, 42, style, r=21),
-                                              (text_img(label, 19, stroke=style["ink"]), "center")))
         self.start_btn.set("STOP" if on else "CANCEL" if self.waiting_since else "START",
                            RED if on else YELLOW if self.waiting_since else GREEN)
         self.pause_btn.set("RESUME" if paused else "PAUSE", YELLOW, enabled=bool(on))
@@ -1200,7 +1201,7 @@ class App:
             playing = None
         info = ENTRIES.get(playing or (None if self.prefs["mode"] == "bonus" else self.prefs.get("map")))
         title = f"{info[0]} · {info[1]}".upper() if info else "EVENT MODE"
-        self.now_map.show(title, lambda: text_img(title, 34, max_w=400))     # room for RELOAD ON
+        self.now_map.show(title, lambda: text_img(title, 34, max_w=400))     # room for the reload time
         s = (status or "").capitalize() if on else "Not running"
         self.now_status.show(s, lambda: text_img(s, 17, fill=CREAM, sw=0, shadow=False, max_w=530))
         nxt = stats.get("next") if on else None
