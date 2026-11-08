@@ -3,7 +3,7 @@
 #                 "winrt-Windows.Storage.Streams", "winrt-Windows.Foundation",
 #                 "winrt-Windows.Foundation.Collections", "winrt-Windows.Globalization"]
 # ///
-"""BTD6 AFK farm: Dark Dungeons, Easy, Deflation. One 0-2-5 Dart Monkey (user, 2026-11-08), no hero.
+"""BTD6 AFK farm: Dark Castle, Easy, Deflation. One 0-2-5 Dart Monkey (user, 2026-11-08), no hero.
 Stop: Numpad 0 (or F8). Pause: Numpad 1.
 """
 import time
@@ -64,7 +64,7 @@ def setup():
 
 
 F.setup = setup
-F.nav = lambda: F.nav_to("Dark Dungeons", (625, 420), (1280, 450))   # Easy, Deflation
+F.nav = lambda: F.nav_to("Dark Castle", (625, 420), (1280, 450))   # Easy, Deflation
 F.ingame = lambda: None
 F.on_mode_screen = lambda: None
 

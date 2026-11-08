@@ -72,12 +72,12 @@ It only clicks while BTD6 is on your screen. Tab out and it waits, so you can do
 | Sanctuary | `sanctuary_deflation.py` | Deflation ★ | Obyn |
 | Ravine | `ravine_deflation.py` | Deflation ★ | Obyn |
 | Dark Castle | `dark_castle_impop.py` | Impoppable ★, Hard, Medium, Easy | Striker Jones |
+| Dark Castle | `dark_castle_deflation.py` | Deflation | none |
 | Muddy Puddles | `muddy_puddles_impop.py` | Impoppable ★, Hard, Medium, Easy | Psi |
 | Glacial Trail | `glacial_trail_impop.py` | Impoppable ★, Hard, Medium, Easy | Silas |
 | Quad | `quad_easy.py` | Easy ★ | Etienne |
 | Workshop | `workshop_easy.py` | Easy ★ | Sauda |
 | Dark Dungeons | `dark_dungeons_easy.py` | Easy ★ | Obyn |
-| Dark Dungeons | `dark_dungeons_deflation.py` | Deflation | none |
 | Bloody Puddles | `bloody_puddles_easy.py` | Easy ★ | none |
 | Tricky Tracks | `tricky_tracks_easy.py` | Easy ★ | Quincy |
 | #Ouch | `ouch_easy.py` | Easy ★ | none |
