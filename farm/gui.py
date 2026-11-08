@@ -52,6 +52,7 @@ MAPS = [  # file, map, mode, hero (Infernal is Impoppable only: user, 2026-11-05
     ("sanctuary_deflation.py", "Sanctuary", "Deflation", "Obyn"),
     ("ravine_deflation.py", "Ravine", "Deflation", "Obyn"),
     ("infernal_easy.py", "Infernal", "Deflation", None),
+    ("dark_dungeons_deflation.py", "Dark Dungeons", "Deflation", None),
     ("quad_easy.py", "Quad", "Easy", "Etienne"),
     ("workshop_easy.py", "Workshop", "Easy", "Sauda"),
     ("dark_dungeons_easy.py", "Dark Dungeons", "Easy", "Obyn"),
