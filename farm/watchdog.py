@@ -69,7 +69,8 @@ BONUS_CHOICES = {
     "Quad": ["quad_easy.py"], "Workshop": ["workshop_easy.py"], "Dark Dungeons": ["dark_dungeons_easy.py"],
     "Bloody Puddles": ["bloody_puddles_easy.py"], "Tricky Tracks": ["tricky_tracks_easy.py"],
     "#Ouch": ["ouch_easy.py"],
-    "Flooded Valley": ["flooded_easy.py"], "Ravine": ["ravine_deflation.py"],
+    "Flooded Valley": ["flooded_valley_impop.py@easy"],     # user: Easy Standard, not Deflation (2026-11-08)
+    "Ravine": ["ravine_deflation.py"],
 }
 BONUS_SCRIPTS = {m: c[0] for m, c in BONUS_CHOICES.items()}
 BONUS = SCRIPT.lower() == "bonus"
@@ -79,12 +80,13 @@ BONUS = SCRIPT.lower() == "bonus"
 # bonus again (the farm exits 6 after that win); one picked map stops with the reason.
 SKIP_FILE = os.path.join(HERE, "skipped_maps.json")
 SKIP_FOR = 6 * 3600
-STAND_INS = ["flooded_easy.py", "bloody_puddles_easy.py", "ouch_easy.py", "infernal_impop.py",
+STAND_INS = ["flooded_valley_impop.py@easy", "bloody_puddles_easy.py", "ouch_easy.py", "infernal_impop.py",
              "quad_easy.py", "workshop_easy.py", "dark_dungeons_easy.py", "tricky_tracks_easy.py",
              "ravine_deflation.py", "sanctuary_deflation.py"]
 SCRIPT_MAP = {v: k for k, v in BONUS_SCRIPTS.items()}
 SCRIPT_MAP.update({"infernal_easy.py": "Infernal", "ravine_deflation.py": "Ravine", "sanctuary_deflation.py": "Sanctuary",
-                   "sanctuary_impop.py": "Sanctuary", "infernal_impop.py": "Infernal"})
+                   "sanctuary_impop.py": "Sanctuary", "infernal_impop.py": "Infernal",
+                   "flooded_valley_impop.py": "Flooded Valley", "flooded_easy.py": "Flooded Valley"})
 STAND_IN = {"script": None}
 
 
@@ -115,8 +117,10 @@ def bonus_script():
 
 def start_farm(extra=()):
     st = state() or {}
-    if BONUS:
-        globals()["SCRIPT"] = STAND_IN["script"] or bonus_script()
+    diff = DIFF
+    if BONUS:       # a bonus pick can carry a difficulty too: "flooded_valley_impop.py@easy"
+        s, _, diff = (STAND_IN["script"] or bonus_script()).partition("@")
+        globals()["SCRIPT"] = s
     path = os.path.join(HERE, "maps", os.path.basename(SCRIPT))     # map scripts live in maps/
     if not os.path.exists(path):
         path = os.path.join(HERE, SCRIPT)
@@ -124,7 +128,7 @@ def start_farm(extra=()):
     fresh = time.time() - st.get("heartbeat", 0) < HEARTBEAT_LIMIT
     if fresh and st.get("running") and user32.FindWindowW(None, "BloonsTD6"):
         args.append("--running")        # towers are already down in this game
-    log("starting farm " + " ".join(args[3:]) + (f" @{DIFF}" if DIFF and not BONUS else ""))
+    log("starting farm " + " ".join(args[3:]) + (f" @{diff}" if diff else ""))
     try:                                # keep farm.log small: past 5 MB it becomes farm.log.old
         if os.path.getsize(FARM_LOG) > 5 * 1024 * 1024:
             os.replace(FARM_LOG, FARM_LOG + ".old")
@@ -136,8 +140,8 @@ def start_farm(extra=()):
         env["BTD6_ONE_GAME"] = "1"      # one game on a stand-in map, then back to the bonus
     elif BONUS:
         env["BTD6_BONUS"] = "1"
-    if DIFF and not BONUS:
-        env["BTD6_DIFF"] = DIFF
+    if diff:
+        env["BTD6_DIFF"] = diff
     return subprocess.Popen(args, cwd=HERE, stdout=out, stderr=subprocess.STDOUT, env=env,
                             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
 

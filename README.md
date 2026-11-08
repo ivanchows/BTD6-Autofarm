@@ -75,6 +75,7 @@ It only clicks while BTD6 is on your screen. Tab out and it waits, so you can do
 | `tricky_tracks_easy.py` | Tricky Tracks | Easy | Quincy |
 | `ouch_easy.py` | #Ouch | Easy | none |
 | `infernal_impop.py` | Infernal | Impoppable | Benjamin |
+| `flooded_valley_impop.py` | Flooded Valley | Easy, Medium (`@easy`, `@medium`) | Etienne |
 | `dark_castle_impop.py` | Dark Castle | Impoppable | Striker Jones |
 | `muddy_puddles_impop.py` | Muddy Puddles | Impoppable | Psi |
 | `glacial_trail_impop.py` | Glacial Trail | Impoppable | Silas |

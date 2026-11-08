@@ -40,7 +40,7 @@ GAME_LOAD = 25                              # seconds after the window shows bef
 W, H = 1120, 740
 
 BONUS_PLAYS = {  # map -> the farm bonus mode plays there (watchdog.BONUS_SCRIPTS)
-    "Infernal": "infernal_impop.py", "Flooded Valley": "flooded_easy.py",
+    "Infernal": "infernal_impop.py", "Flooded Valley": "flooded_valley_impop.py@easy",
     "Sanctuary": "sanctuary_deflation.py", "Ravine": "ravine_deflation.py",     # Sanctuary: Deflation (user)
     "Quad": "quad_easy.py", "Workshop": "workshop_easy.py", "Dark Dungeons": "dark_dungeons_easy.py",
     "Bloody Puddles": "bloody_puddles_easy.py", "Tricky Tracks": "tricky_tracks_easy.py",
@@ -59,6 +59,7 @@ MAPS = [  # file, map, mode, hero (Infernal is Impoppable only: user, 2026-11-05
     ("tricky_tracks_easy.py", "Tricky Tracks", "Easy", "Quincy"),
     ("ouch_easy.py", "#Ouch", "Easy", None),
     ("infernal_impop.py", "Infernal", "Impoppable", "Benjamin"),
+    ("flooded_valley_impop.py", "Flooded Valley", "Impoppable", "Etienne"),
     ("dark_castle_impop.py", "Dark Castle", "Impoppable", "Striker Jones"),
     ("muddy_puddles_impop.py", "Muddy Puddles", "Impoppable", "Psi"),
     ("glacial_trail_impop.py", "Glacial Trail", "Impoppable", "Silas"),
@@ -77,11 +78,14 @@ MODE_COLOR = {"Deflation": "#56c6ff", "Easy": "#6be08a", "Medium": "#ffd84a", "H
 COLS = [("Deflation", "DEFL"), ("Easy", "EASY"), ("Medium", "MED"), ("Hard", "HARD"), ("Impoppable", "IMPOP")]
 # key (what the watchdog is given) -> (map, mode). An Impoppable build also plays Easy / Medium / Hard
 # Standard: "<file>@easy" etc. (user, 2026-11-07)
+# A build not proven on every difficulty yet: only these (user, 2026-11-08)
+ONLY = {"flooded_valley_impop.py": ("Easy", "Medium")}
 ENTRIES = {}
 for _f, _m, _mode, _h in MAPS:
-    ENTRIES[_f] = (_m, _mode)
+    if _mode in ONLY.get(_f, (_mode,)):
+        ENTRIES[_f] = (_m, _mode)
     if _mode == "Impoppable":
-        for _d in ("Easy", "Medium", "Hard"):
+        for _d in ONLY.get(_f, ("Easy", "Medium", "Hard")):
             if not any(m == _m and md == _d for m, md in ENTRIES.values()):
                 ENTRIES[f"{_f}@{_d.lower()}"] = (_m, _d)
 ROWS = sorted({m for m, _ in ENTRIES.values()}, key=lambda m: m.lstrip("#").lower())
