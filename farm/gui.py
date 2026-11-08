@@ -27,6 +27,18 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageTk
 
 OPENED = time.time()        # when this copy of the app was loaded
 
+# The app runs with no console: errors and hard crashes go to gui.log instead of vanishing
+import faulthandler
+try:
+    _ERR = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.log"), "a", encoding="utf-8")
+    _ERR.write(time.strftime("%Y-%m-%d %H:%M:%S app opened") + chr(10))
+    _ERR.flush()
+    faulthandler.enable(file=_ERR)
+    if sys.stderr is None:
+        sys.stderr = _ERR
+except OSError:
+    _ERR = None
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(HERE, "state.json")
 FARM_LOG = os.path.join(HERE, "farm.log")
@@ -604,6 +616,7 @@ class App:
         except Exception:
             pass
         self.root = tk.Tk()
+        self.root.report_callback_exception = self.on_error
         self.root.title("BTD6 Autofarm")
         self.root.resizable(False, False)
         self.root.geometry(f"{W}x{H}")
@@ -845,6 +858,13 @@ class App:
         on = self.prefs.get("autostart", True)
         self.autostart_btn.set("AUTO START ON" if on else "AUTO START OFF", GREEN if on else GREY)
 
+    def on_error(self, *exc):
+        """An error in a click or timer: log it (gui.log) and keep the window up."""
+        import traceback
+        if _ERR:
+            _ERR.write(time.strftime("%H:%M:%S ") + "".join(traceback.format_exception(*exc)))
+            _ERR.flush()
+
     def hover_note(self, btn, text):
         """A small note above btn while the mouse is on it."""
         t = text_img(text, 14, fill=CREAM, sw=0, shadow=False)
@@ -853,8 +873,10 @@ class App:
         note.show(text, lambda: img)
         self.cv.itemconfigure(note.id, state="hidden")
         for seq, state in (("<Enter>", "normal"), ("<Leave>", "hidden")):
-            self.cv.tag_bind(btn.sprite.id, seq, lambda e, s=state: (self.cv.itemconfigure(note.id, state=s),
-                                                                    self.cv.tag_raise(note.id)), add="+")
+            # (no tag_raise here: re-stacking under the mouse made Tk fire Leave/Enter forever: the
+            # button flickered like mad clicking and the app froze. The note is drawn last anyway.)
+            self.cv.tag_bind(btn.sprite.id, seq, lambda e, s=state: self.cv.itemconfigure(note.id, state=s),
+                             add="+")
 
     def on_reload(self):
         self.prefs["reload"] = not self.prefs.get("reload", True)
