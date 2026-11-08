@@ -447,6 +447,33 @@ def game_open():
         return False
 
 
+RELOAD_AFTER = 2 * 3600     # core.RELOAD_AFTER: the farm reloads BTD6 once it has run this long
+
+
+def game_started():
+    """When BTD6 was started (epoch seconds, from its process), or None."""
+    try:
+        import ctypes.wintypes as wt
+        u, k = ctypes.windll.user32, ctypes.windll.kernel32
+        hwnd = u.FindWindowW(None, "BloonsTD6")
+        if not hwnd:
+            return None
+        pid = wt.DWORD()
+        u.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        h = k.OpenProcess(0x1000, False, pid.value)
+        if not h:
+            return None
+        try:
+            ft = [wt.FILETIME() for _ in range(4)]
+            if not k.GetProcessTimes(h, *[ctypes.byref(f) for f in ft]):
+                return None
+        finally:
+            k.CloseHandle(h)
+        return (ft[0].dwHighDateTime << 32 | ft[0].dwLowDateTime) / 1e7 - 11644473600   # 1601 -> 1970
+    except Exception:
+        return None
+
+
 def hms(sec):
     sec = int(max(0, sec))
     return f"{sec // 3600}:{sec // 60 % 60:02d}:{sec % 60:02d}"
@@ -657,6 +684,7 @@ class App:
         self.now_map = Sprite(cv, RX + 40, RY + 140)
         self.now_status = Sprite(cv, RX + 42, RY + 186)
         self.now_next = Sprite(cv, RX + 42, RY + 210)
+        self.now_reload = Sprite(cv, RX + RW - 40, RY + 190, anchor="ne")    # next BTD6 reload, local time
 
         cy = RY + 262
         self.start_btn = Button(self, RX + 22, cy, 250, 76, self.on_start, size=38)
@@ -1155,6 +1183,15 @@ class App:
         n = f"NEXT: {nxt}" if nxt else ""
         self.now_next.show(n, lambda: text_img(n, 20, fill=GOLD, max_w=530) if n
                            else Image.new("RGBA", (1, 1)))
+        t0 = game_started() if on else None
+        if t0 is None:
+            r = ""
+        elif time.time() >= t0 + RELOAD_AFTER:
+            r = "RELOAD AFTER THIS GAME"
+        else:       # the PC's own clock and time zone
+            r = "RELOAD " + time.strftime("%I:%M %p", time.localtime(t0 + RELOAD_AFTER)).lstrip("0")
+        self.now_reload.show(r, lambda: text_img(r, 15, fill=CREAM, sw=0, shadow=False) if r
+                             else Image.new("RGBA", (1, 1)))
         self.refresh_tiles(playing)
 
 
