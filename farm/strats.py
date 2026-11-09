@@ -16,7 +16,7 @@ OUT = os.path.join(HERE, "strats.json")
 KEYS = {"q": "Dart", "w": "Boomerang", "e": "Bomb", "r": "Tack", "t": "Ice", "y": "Glue", "z": "Sniper",
         "x": "Sub", "c": "Buccaneer", "v": "Ace", "b": "Heli", "n": "Mortar", "m": "Dartling", "a": "Wizard",
         "s": "Super", "d": "Ninja", "f": "Alchemist", "g": "Druid", "h": "Banana Farm", "j": "Spike Factory",
-        "k": "Village", "l": "Engineer", "i": "Beast Handler", "o": "Mermonkey", ";": "Desperado", "u": "Hero"}
+        "k": "Village", "l": "Engineer", "i": "Beast Handler", "p": "Skywarden", "o": "Mermonkey", ";": "Desperado", "u": "Hero"}
 
 
 class Dummy:
@@ -79,14 +79,25 @@ def describe(mod, I, D):
     nice = dict(getattr(D, "NICE", {}) or {})
     names = {}
 
+    count = {}
+
     def name(pos, key=None):
+        """Every tower numbered by type in the order placed: Sniper 1, Sniper 2 (user, 2026-11-09).
+        The hero by its own name."""
         r = repr(pos)
-        if r in nice:
-            return nice[r]
+        if key is None and r not in names:     # placed by a step of its own: its key from the name tokens
+            tok = (getattr(I, "NAME", {}) or {}).get(r)
+            key = next((k for k, v in (getattr(I, "TOKENS", {}) or {}).items() if v == tok), None)
         if r not in names:
-            base = KEYS.get(key, "Tower")
-            n = sum(1 for v in names.values() if v.startswith(base)) + 1
-            names[r] = base if n == 1 else f"{base} {n}"
+            own =re.sub(r"\s*\(.*\)|\s*\d+$", "", nice.get(r, "")).replace("Late ", "").strip()
+            if key == "u":
+                names[r] = own or getattr(sys.modules["core"], "HERO", None) or "Hero"
+                if isinstance(names[r], Dummy):
+                    names[r] = "Hero"
+                return names[r]
+            base = KEYS.get(key) if key in KEYS else (own or "Tower")
+            count[base] = count.get(base, 0) + 1
+            names[r] = f"{base} {count[base]}"
         return names[r]
     tiers = {}
     rounds = []
@@ -128,13 +139,13 @@ def describe(mod, I, D):
 
 # Scripts without the step machinery: their builds, as written in them (keep in step by hand)
 HAND = {
-    "dark_castle_deflation.py": [(-1, ["Dart 0-2-5"])],
-    "flooded_easy.py": [(-1, ["Buccaneer 4-2-0", "Start round 1", "Sub 4-2-0", "Wizard 2-0-4"])],
-    "ravine_deflation.py": [(-1, ["Village 0-2-1", "Buccaneer 4-2-0", "Start round 1", "Obyn", "Druid 1 0-3-0",
-                                  "Druid 2 0-3-0", "Druid 3 0-3-0", "Boomerang 3-0-2"])],
-    "sanctuary_deflation.py": [(-1, ["Village 0-2-1", "Buccaneer 4-2-0", "Obyn", "Wizard 2-0-4",
-                                     "Druid 1-1-0", "Start round 1"])],
-    "infernal_easy.py": [(-1, ["Start round 1", "Sniper 0-2-4", "Wizard 4-0-2", "Alchemist 2-0-0"])],
+    "dark_castle_deflation.py": [(-1, ["Dart 1 0-2-5"])],
+    "flooded_easy.py": [(-1, ["Buccaneer 1 4-2-0", "Start round 1", "Sub 1 4-2-0", "Wizard 1 2-0-4"])],
+    "ravine_deflation.py": [(-1, ["Village 1 0-2-1", "Buccaneer 1 4-2-0", "Start round 1", "Obyn", "Druid 1 0-3-0",
+                                  "Druid 2 0-3-0", "Druid 3 0-3-0", "Boomerang 1 3-0-2"])],
+    "sanctuary_deflation.py": [(-1, ["Village 1 0-2-1", "Buccaneer 1 4-2-0", "Obyn", "Wizard 1 2-0-4",
+                                     "Druid 1 1-1-0", "Start round 1"])],
+    "infernal_easy.py": [(-1, ["Start round 1", "Sniper 1 0-2-4", "Wizard 1 4-0-2", "Alchemist 1 2-0-0"])],
 }
 
 

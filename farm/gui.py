@@ -1506,9 +1506,10 @@ class App:
         if t0 is None:
             r = ""
         elif time.time() >= t0 + RELOAD_AFTER:
-            r = "AFTER THIS GAME"
-        else:       # the PC's own clock and time zone
-            r = "NEXT " + time.strftime("%I:%M %p", time.localtime(t0 + RELOAD_AFTER)).lstrip("0")
+            r = "RELOAD AFTER THIS GAME"
+        else:       # a countdown, whole minutes (redrawn only when the minute changes)
+            left = int(t0 + RELOAD_AFTER - time.time() + 59) // 60
+            r = f"RELOAD IN {left // 60}h {left % 60:02d}m" if left >= 60 else f"RELOAD IN {left}m"
         self.now_reload.show(r, lambda: text_img(r, 15, fill=CREAM, sw=0, shadow=False) if r
                              else Image.new("RGBA", (1, 1)))
         self.refresh_tiles(playing)
