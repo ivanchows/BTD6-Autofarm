@@ -52,11 +52,12 @@ STEPS = {
         + I.U(ICE2, top=2, mid=1) + I.U(ICE3, top=2, bot=1)      # 2-4-0 and 2-0-4
         + I.U(SPIKE, bot=1)                                      # Perma-Spike 2-0-5
         + I.U(ICE1, bot=1)                                       # Icicle Impale 2-0-5
-        # (no second Icicle Impale: only one of each tier 5 can be on the map)
+        # (the second Icicle Impale comes last: Silas allows it)
         + I.U(ICE2, mid=1)                                       # Absolute Zero 2-5-0
         + I.U(MORTAR, top=2, mid=2)                              # Mortar 2-4-0
-        # round 100 leaked twice with ~$44k unspent: put it into the Ninja (4-0-0, Bloonjitsu)
-        + I.U(NINJA, top=2)),
+        # Silas lets a second Ice Monkey have the same tier 5 (user, 2026-11-09)
+        + I.U(ICE3, bot=1)),                                     # Ice 3 2-0-5
+        # (no 4-0-0 Ninja at the end: user, 2026-11-09)
 }
 I.STEPS = {max(0, k - 1) if k else 0: v for k, v in STEPS.items()}
 I.DURING = {}
