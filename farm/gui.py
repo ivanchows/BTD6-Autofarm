@@ -312,6 +312,21 @@ GHOSTS = [  # (x, y, size, alpha): mostly in the title bar, a few behind the see
 ]
 
 
+def status_label(text, dot):
+    """A flat dark pill: a coloured dot and the word. Reads as a status, not a button."""
+    t = text_img(text, 16, fill=CREAM, sw=0, shadow=False)
+    w, h = 22 + 14 + 10 + t.width + 18, 42
+    k = SS
+    im = Image.new("RGBA", (w * k, h * k), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((0, 0, w * k - 1, h * k - 1), h * k // 2, fill=(10, 30, 80, 150))
+    cy = h * k // 2
+    d.ellipse((18 * k, cy - 7 * k, 32 * k, cy + 7 * k), fill=dot)
+    im = down(im)
+    im.alpha_composite(t, (22 + 14 + 6, (h - t.height) // 2))
+    return im
+
+
 def background():
     """Menu blue with depth: soft cyan and violet glows, a hex pattern that fades out toward the
     bottom, a dark vignette, and frosted bloons drifting at the top."""
@@ -654,11 +669,14 @@ class App:
         self.static(t, 18, 14)
         t2 = text_img("AUTOFARM", 44, sw=2)
         self.static(t2, 22 + t.width, 14)
-        self.game_btn = Button(self, 22 + t.width + t2.width + 22, 26, 168, 42, self.open_game, size=17, r=21)
+        # BTD6 open/closed: a status label (a dot and the word), not a button; closed, a click opens it
+        gx = 22 + t.width + t2.width + 22
+        self.game_label = Sprite(cv, gx, 26)
+        cv.tag_bind(self.game_label.id, "<ButtonRelease-1>", lambda e: self.open_game())
         self.waiting_since = None       # Start pressed with the game closed: when it was opened
         # the instas won from candy boxes (core.read_insta -> instas_got.json)
-        self.got_btn = Button(self, self.game_btn.x + 168 + 16, 26, 168, 42, self.open_got, size=17, r=21)
-        self.got_btn.set("MY INSTAS", BLUE)
+        self.got_btn = Button(self, gx + 168 + 16, 26, 196, 42, self.open_got, size=17, r=21)
+        self.got_btn.set("INSTAS GAINED", BLUE)
         self.got_win = None
         self.update_btn = Button(self, W - 216, 20, 196, 52, self.do_update, size=22)
         self.update_btn.set("CHECK UPDATE", BLUE)
@@ -715,7 +733,7 @@ class App:
         self.insta_btn.set("INSTAS", BLUE)
         self.insta_win = None
         self.hover_note(self.afk_btn, "Tabs back into the game")
-        self.hover_note(self.reload_btn, "Steam only")       # it reopens BTD6 through Steam
+        self.hover_note(self.reload_btn, "Restarts the game to clear cache · Steam only")
 
         ly = ty + 60
         lh = RY + RH - ly - 70
@@ -908,7 +926,7 @@ class App:
         path = os.path.join(HERE, "instas_got.json")
         w, h = 420, 520
         win = self.got_win = tk.Toplevel(self.root)
-        win.title("My Instas")
+        win.title("Instas Gained")
         win.resizable(False, False)
         win.configure(bg="#163f95")
         win.transient(self.root)
@@ -1373,7 +1391,8 @@ class App:
             self.stop_at = None
 
         game = game_open()
-        self.game_btn.set("BTD6 OPEN" if game else "BTD6 CLOSED", GREEN if game else RED)
+        self.game_label.show(game, lambda: status_label("BTD6 OPEN" if game else "BTD6 CLOSED",
+                                                        "#5fe35a" if game else "#ff5a52"))
         if self.waiting_since:              # Start was pressed with the game closed
             if game and not self.game_seen:
                 self.game_seen = time.time()
