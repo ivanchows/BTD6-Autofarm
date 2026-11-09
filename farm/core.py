@@ -1426,8 +1426,17 @@ def clear_popup(n):
     """Level-ups, rewards, anything else: click the title-banner area. Never the middle or
     bottom (a defeat screen keeps its paid "Continue?" there) and never Esc (on the start
     screen Esc quits the game)."""
+    if n >= 2 and n % 2 == 0 and matches(grab(), BACK_ARROW):
+        # a menu the farm doesn't know (the hero screen, left open when a nav failed while tabbed
+        # out: 17 min of clicking at the top, 2026-11-09): its back arrow, top left
+        print("unknown screen with a back arrow -> back")
+        click(78, 55)
+        return
     print("unknown screen, clicking through")
     click(960, 200)
+
+
+BACK_ARROW = [(110, 30, (0, 221, 255), 30), (78, 88, (0, 193, 255), 30), (60, 55, (255, 255, 255), 20)]   # the menus' top-left back button
 
 
 def farm():
