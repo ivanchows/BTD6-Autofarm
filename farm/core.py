@@ -1096,10 +1096,34 @@ def hero_select(name):
             click(78, 55)
             wait(1.5)
         skip_map(MAP_NAME, f"hero {name} not unlocked")
-    click(*HERO_SELECT_BTN)
+    forget_hero()           # until the game shows it took
+    for _ in range(3):
+        click(*HERO_SELECT_BTN)
+        wait(0.8)
+        # only a button reading SELECTED proves it: a click lost while tabbed out left the farm
+        # sure of Sauda while the game kept Silas (user, 2026-11-09)
+        if "SELECTED" in hero_btn_text():
+            try:
+                with open(HERO_FILE, "w", encoding="utf-8") as f:
+                    f.write(name)
+            except OSError:
+                pass
+            return
+    print(f"hero {name}: Select didn't take")
+
+
+def hero_btn_text():
+    c = grab().crop(tuple(round(v * W / 1920) if i % 2 == 0 else round(v * H / 1080)
+                          for i, v in enumerate(HERO_BTN_BOX)))
+    t = ""
+    for v in (c, c.resize((c.width * 2, c.height * 2)), ImageOps.invert(c.convert("L"))):
+        t += " " + _ocr(v).upper().replace(" ", "")
+    return t
+
+
+def forget_hero():
     try:
-        with open(HERO_FILE, "w", encoding="utf-8") as f:
-            f.write(name)
+        os.remove(HERO_FILE)
     except OSError:
         pass
 

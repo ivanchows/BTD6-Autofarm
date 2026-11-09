@@ -159,6 +159,10 @@ def main():
         os.remove(os.path.join(HERE, "auto_start.ok"))
     except OSError:
         pass
+    try:                                # and the hero once more: one picked by hand in between isn't seen
+        os.remove(os.path.join(HERE, "hero.txt"))
+    except OSError:
+        pass
     try:                                # a stop from the last session must not end this one
         st = state() or {}
         st.setdefault("stats", {}).pop("stopped", None)
