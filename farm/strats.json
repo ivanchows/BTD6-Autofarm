@@ -1,0 +1,906 @@
+{
+ "bloody_puddles_easy.py": [
+  {
+   "round": -1,
+   "steps": [
+    "top Sub",
+    "bottom Sub"
+   ]
+  },
+  {
+   "round": 0,
+   "steps": [
+    "top Sub 1-0-1",
+    "bottom Sub 1-0-1",
+    "top Sub 2-0-1",
+    "bottom Dart 0-0-2",
+    "bottom Sub 2-0-1",
+    "top Dart 0-0-2",
+    "Sniper 1-0-2",
+    "bottom Sub 2-0-2",
+    "top Sub 2-0-2",
+    "bottom Sub 2-0-3",
+    "top Sub 2-0-3",
+    "bottom Sub 2-0-4",
+    "top Sub 2-0-4",
+    "Alchemist 3-0-0",
+    "Alchemist 2 2-0-0"
+   ]
+  }
+ ],
+ "dark_castle_deflation.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Dart 0-2-5"
+   ]
+  }
+ ],
+ "dark_castle_impop.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Striker",
+    "Striker target Strong",
+    "Dart",
+    "Sub"
+   ]
+  },
+  {
+   "round": 0,
+   "steps": [
+    "Spike Factory 0-0-2",
+    "spike factory -> set target (1135, 590)",
+    "Spike Factory 2-0-4",
+    "Alchemist 3-0-0",
+    "Bomb 4-2-0"
+   ]
+  },
+  {
+   "round": 46,
+   "steps": [
+    "Village 3-0-0",
+    "Spike Factory 2-0-5",
+    "Bomb 5-2-0",
+    "Mauler 1 0-3-0",
+    "Mauler 1 target Strong",
+    "Mauler 2 0-3-0",
+    "Mauler 2 target Strong",
+    "Mauler 3 0-3-0",
+    "Mauler 3 target Strong",
+    "Mauler 4 0-3-0",
+    "Mauler 4 target Strong",
+    "Mauler 5 0-3-0",
+    "Mauler 5 target Strong",
+    "Mauler 1 0-4-0",
+    "Mauler 2 0-4-0",
+    "Mauler 3 0-4-0",
+    "Mauler 4 0-4-0",
+    "Mauler 5 0-4-0"
+   ]
+  }
+ ],
+ "dark_dungeons_easy.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Obyn",
+    "Dart",
+    "Sub"
+   ]
+  },
+  {
+   "round": 0,
+   "steps": [
+    "Sub 0-0-1",
+    "Sniper 1-0-0",
+    "Sub 0-2-2",
+    "Dart 4-0-2",
+    "Bomb 2-3-0",
+    "Heli 3-2-0"
+   ]
+  }
+ ],
+ "flooded_easy.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Buccaneer 4-2-0",
+    "Start round 1",
+    "Sub 4-2-0",
+    "Wizard 2-0-4"
+   ]
+  }
+ ],
+ "flooded_valley_impop.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Mermonkey 1"
+   ]
+  },
+  {
+   "round": 0,
+   "steps": [
+    "Mermonkey 2",
+    "Mermonkey 3",
+    "Sub",
+    "Etienne",
+    "Buccaneer 2-2-0",
+    "Sub 2-0-1",
+    "Buccaneer 3-2-0",
+    "Sub 2-0-4",
+    "Ice 0-2-0",
+    "Mermonkey 1 2-2-0"
+   ]
+  },
+  {
+   "round": 40,
+   "steps": [
+    "Buccaneer 5-2-0"
+   ]
+  },
+  {
+   "round": 60,
+   "steps": [
+    "Ice 0-3-2",
+    "Village 4-0-2",
+    "Sub 2 2-5-0",
+    "Glue 0-2-4",
+    "Glue target Strong",
+    "Mermonkey 1 4-2-0"
+   ]
+  },
+  {
+   "round": 76,
+   "steps": [
+    "Ability 2"
+   ]
+  },
+  {
+   "round": 78,
+   "steps": [
+    "Ability 2"
+   ]
+  },
+  {
+   "round": 80,
+   "steps": [
+    "Ability 3"
+   ]
+  },
+  {
+   "round": 84,
+   "steps": [
+    "Ability 2"
+   ]
+  },
+  {
+   "round": 94,
+   "steps": [
+    "Ability 2"
+   ]
+  },
+  {
+   "round": 97,
+   "steps": [
+    "Ability 2"
+   ]
+  },
+  {
+   "round": 100,
+   "steps": [
+    "Ability 3"
+   ]
+  }
+ ],
+ "glacial_trail_impop.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Dart",
+    "Ninja",
+    "Ninja target Strong"
+   ]
+  },
+  {
+   "round": 0,
+   "steps": [
+    "Ninja 2-0-0",
+    "Silas",
+    "Ice 1",
+    "Spike Factory 0-0-2",
+    "Spike Factory target Smart",
+    "Spike Factory 2-0-3",
+    "Ice 1 2-0-3",
+    "Ice 1 target Strong",
+    "Ice 2 (bottom)",
+    "Ice 3 (top)",
+    "Ice 1 2-0-4",
+    "Mortar 0-2-0",
+    "mortar -> aim under ice 1",
+    "Spike Factory 2-0-4",
+    "Ice 2 (bottom) 0-3-0",
+    "Ice 3 (top) 0-0-3",
+    "Ice 3 (top) target Strong",
+    "Ice 2 (bottom) 2-4-0",
+    "Ice 3 (top) 2-0-4",
+    "Spike Factory 2-0-5",
+    "Ice 1 2-0-5",
+    "Ice 2 (bottom) 2-5-0",
+    "Mortar 2-4-0",
+    "Ice 3 (top) 2-0-5"
+   ]
+  }
+ ],
+ "infernal_easy.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Start round 1",
+    "Sniper 0-2-4",
+    "Wizard 4-0-2",
+    "Alchemist 2-0-0"
+   ]
+  }
+ ],
+ "infernal_impop.py": [
+  {
+   "round": 0,
+   "steps": [
+    "Tower",
+    "Tower 2 1-0-0"
+   ]
+  },
+  {
+   "round": 8,
+   "steps": [
+    "Tower 3 0-0-1"
+   ]
+  },
+  {
+   "round": 10,
+   "steps": [
+    "Tower 3 0-1-2"
+   ]
+  },
+  {
+   "round": 12,
+   "steps": [
+    "Tower 3 0-2-2"
+   ]
+  },
+  {
+   "round": 17,
+   "steps": [
+    "Sniper",
+    "Sniper target Strong",
+    "Sniper 2 1-0-0",
+    "Sniper 2 target Strong"
+   ]
+  },
+  {
+   "round": 22,
+   "steps": [
+    "Hero"
+   ]
+  },
+  {
+   "round": 23,
+   "steps": [
+    "Sniper 2 1-1-0"
+   ]
+  },
+  {
+   "round": 26,
+   "steps": [
+    "Sniper 2 1-2-0"
+   ]
+  },
+  {
+   "round": 27,
+   "steps": [
+    "Tower 3 0-3-2"
+   ]
+  },
+  {
+   "round": 32,
+   "steps": [
+    "Sniper 0-2-2",
+    "Sniper target First"
+   ]
+  },
+  {
+   "round": 35,
+   "steps": [
+    "Sniper 0-2-3"
+   ]
+  },
+  {
+   "round": 38,
+   "steps": [
+    "Sniper 0-2-4"
+   ]
+  },
+  {
+   "round": 42,
+   "steps": [
+    "Village 2-0-2"
+   ]
+  },
+  {
+   "round": 48,
+   "steps": [
+    "Village 2-0-3"
+   ]
+  },
+  {
+   "round": 50,
+   "steps": [
+    "Sniper 2 3-2-0"
+   ]
+  },
+  {
+   "round": 55,
+   "steps": [
+    "Sniper 0-2-5"
+   ]
+  },
+  {
+   "round": 58,
+   "steps": [
+    "Alchemist 4-0-1"
+   ]
+  },
+  {
+   "round": 68,
+   "steps": [
+    "Sniper 3 0-5-2"
+   ]
+  },
+  {
+   "round": 80,
+   "steps": [
+    "Alchemist 5-0-1"
+   ]
+  },
+  {
+   "round": 86,
+   "steps": [
+    "Sniper 2 5-2-0"
+   ]
+  }
+ ],
+ "muddy_puddles_impop.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Buccaneer"
+   ]
+  },
+  {
+   "round": 0,
+   "steps": [
+    "Sniper"
+   ]
+  },
+  {
+   "round": 7,
+   "steps": [
+    "Sniper target Strong"
+   ]
+  },
+  {
+   "round": 8,
+   "steps": [
+    "Boomerang",
+    "Boomerang target Last",
+    "boomerang -> switch hand"
+   ]
+  },
+  {
+   "round": 9,
+   "steps": [
+    "Sub 1"
+   ]
+  },
+  {
+   "round": 11,
+   "steps": [
+    "Desperado",
+    "Desperado target Strong"
+   ]
+  },
+  {
+   "round": 12,
+   "steps": [
+    "Sub 2 1-0-0"
+   ]
+  },
+  {
+   "round": 14,
+   "steps": [
+    "Sub 2 2-0-0"
+   ]
+  },
+  {
+   "round": 17,
+   "steps": [
+    "Sub 2 2-0-1"
+   ]
+  },
+  {
+   "round": 21,
+   "steps": [
+    "Sub 2 2-0-2",
+    "Sniper 1-1-0"
+   ]
+  },
+  {
+   "round": 26,
+   "steps": [
+    "Psi",
+    "psi -> strong (3 tabs)"
+   ]
+  },
+  {
+   "round": 29,
+   "steps": [
+    "Sub 2 2-0-3"
+   ]
+  },
+  {
+   "round": 34,
+   "steps": [
+    "Sub 2 2-0-4",
+    "Desperado 0-1-0",
+    "Alchemist 2-0-0"
+   ]
+  },
+  {
+   "round": 36,
+   "steps": [
+    "Alchemist 3-0-1"
+   ]
+  },
+  {
+   "round": 39,
+   "steps": [
+    "Glue 1 1-1-0",
+    "Glue 2 1-1-0",
+    "Glue 2 target Last",
+    "Desperado 2 0-1-0",
+    "Desperado 3 0-1-0",
+    "Desperado 4 0-1-0",
+    "Desperado 5 0-1-0",
+    "Sub 3 2-0-4"
+   ]
+  },
+  {
+   "round": 46,
+   "steps": [
+    "Alchemist 4-0-1"
+   ]
+  },
+  {
+   "round": 48,
+   "steps": [
+    "Buccaneer 3-2-0"
+   ]
+  },
+  {
+   "round": 52,
+   "steps": [
+    "Buccaneer 4-2-0",
+    "Village 2-2-0",
+    "Mermonkey 3-1-0"
+   ]
+  },
+  {
+   "round": 75,
+   "steps": [
+    "Buccaneer 5-2-0"
+   ]
+  },
+  {
+   "round": 76,
+   "steps": [
+    "Ability 1",
+    "Ability 3",
+    "Ability 2"
+   ]
+  },
+  {
+   "round": 80,
+   "steps": [
+    "Ability 2"
+   ]
+  },
+  {
+   "round": 82,
+   "steps": [
+    "Sub 2 2-0-5"
+   ]
+  },
+  {
+   "round": 83,
+   "steps": [
+    "Village 2-3-0",
+    "Late Sub 1",
+    "Late Sub 2",
+    "Late Sub 3",
+    "Late Sub 4"
+   ]
+  },
+  {
+   "round": 86,
+   "steps": [
+    "Late Sub 1 2-0-4"
+   ]
+  },
+  {
+   "round": 88,
+   "steps": [
+    "Late Sub 2 2-0-4"
+   ]
+  },
+  {
+   "round": 90,
+   "steps": [
+    "Late Sub 3 2-0-4"
+   ]
+  },
+  {
+   "round": 93,
+   "steps": [
+    "Late Sub 4 2-0-4"
+   ]
+  },
+  {
+   "round": 97,
+   "steps": [
+    "Village 2-4-0"
+   ]
+  },
+  {
+   "round": 98,
+   "steps": [
+    "Ability 2"
+   ]
+  },
+  {
+   "round": 100,
+   "steps": [
+    "Ability 3"
+   ]
+  }
+ ],
+ "ouch_easy.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Dart",
+    "bottom-right Sub",
+    "top-left Sub"
+   ]
+  },
+  {
+   "round": 0,
+   "steps": [
+    "Desperado 0-1-0",
+    "bottom-right Sub 2-0-3",
+    "top-left Sub 2-2-0",
+    "top-left Sub target Strong"
+   ]
+  },
+  {
+   "round": 27,
+   "steps": [
+    "bottom-right Sub 2-0-4",
+    "top-right Sub 2-0-4"
+   ]
+  }
+ ],
+ "quad_easy.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Etienne",
+    "Dart",
+    "Buccaneer"
+   ]
+  },
+  {
+   "round": 0,
+   "steps": [
+    "Buccaneer 3-2-0",
+    "Druid 1-3-0"
+   ]
+  }
+ ],
+ "ravine_deflation.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Village 0-2-1",
+    "Buccaneer 4-2-0",
+    "Start round 1",
+    "Obyn",
+    "Druid 1 0-3-0",
+    "Druid 2 0-3-0",
+    "Druid 3 0-3-0",
+    "Boomerang 3-0-2"
+   ]
+  }
+ ],
+ "sanctuary_deflation.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Village 0-2-1",
+    "Buccaneer 4-2-0",
+    "Obyn",
+    "Wizard 2-0-4",
+    "Druid 1-1-0",
+    "Start round 1"
+   ]
+  }
+ ],
+ "sanctuary_impop.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Desperado 1",
+    "Desperado 2"
+   ]
+  },
+  {
+   "round": 0,
+   "steps": []
+  },
+  {
+   "round": 7,
+   "steps": [
+    "Desperado 1 target Strong"
+   ]
+  },
+  {
+   "round": 8,
+   "steps": [
+    "Sniper 1"
+   ]
+  },
+  {
+   "round": 9,
+   "steps": [
+    "Sniper 1 target Strong"
+   ]
+  },
+  {
+   "round": 10,
+   "steps": [
+    "Sniper 2",
+    "Sniper 2 target Strong"
+   ]
+  },
+  {
+   "round": 14,
+   "steps": [
+    "Obyn"
+   ]
+  },
+  {
+   "round": 15,
+   "steps": [
+    "Wizard 1-0-0"
+   ]
+  },
+  {
+   "round": 17,
+   "steps": [
+    "Wizard 2-0-0"
+   ]
+  },
+  {
+   "round": 19,
+   "steps": [
+    "Wizard 2-0-1"
+   ]
+  },
+  {
+   "round": 20,
+   "steps": [
+    "Wizard 2-0-2"
+   ]
+  },
+  {
+   "round": 21,
+   "steps": [
+    "Sniper 1 1-0-0",
+    "Sniper 2 target First"
+   ]
+  },
+  {
+   "round": 22,
+   "steps": [
+    "Sniper 2 1-0-0",
+    "Sniper 2 target Strong",
+    "Ability 1"
+   ]
+  },
+  {
+   "round": 25,
+   "steps": [
+    "Ability 1"
+   ]
+  },
+  {
+   "round": 27,
+   "steps": [
+    "Ability 1"
+   ]
+  },
+  {
+   "round": 28,
+   "steps": [
+    "Wizard 3-0-2"
+   ]
+  },
+  {
+   "round": 31,
+   "steps": [
+    "Village 1"
+   ]
+  },
+  {
+   "round": 32,
+   "steps": [
+    "Village 1 0-0-1"
+   ]
+  },
+  {
+   "round": 33,
+   "steps": [
+    "Village 1 0-0-2"
+   ]
+  },
+  {
+   "round": 35,
+   "steps": [
+    "Spike Factory 0-0-1"
+   ]
+  },
+  {
+   "round": 36,
+   "steps": [
+    "Spike Factory 0-0-2",
+    "Spike Factory target Automatic"
+   ]
+  },
+  {
+   "round": 37,
+   "steps": [
+    "Spike Factory 1-0-3"
+   ]
+  },
+  {
+   "round": 38,
+   "steps": [
+    "Alchemist 1 2-0-0"
+   ]
+  },
+  {
+   "round": 39,
+   "steps": [
+    "Alchemist 1 3-0-0"
+   ]
+  },
+  {
+   "round": 42,
+   "steps": [
+    "Alchemist 1 4-0-0"
+   ]
+  },
+  {
+   "round": 45,
+   "steps": [
+    "Spike Factory 1-0-4"
+   ]
+  },
+  {
+   "round": 50,
+   "steps": [
+    "Wizard 4-0-2"
+   ]
+  },
+  {
+   "round": 51,
+   "steps": [
+    "Village 2 3-0-0"
+   ]
+  },
+  {
+   "round": 53,
+   "steps": [
+    "Village 2 4-0-2"
+   ]
+  },
+  {
+   "round": 54,
+   "steps": [
+    "Glue 2-1-0"
+   ]
+  },
+  {
+   "round": 55,
+   "steps": [
+    "Glue 3-2-0"
+   ]
+  },
+  {
+   "round": 58,
+   "steps": [
+    "Glue 4-2-0"
+   ]
+  },
+  {
+   "round": 78,
+   "steps": [
+    "Wizard 5-0-2"
+   ]
+  },
+  {
+   "round": 85,
+   "steps": [
+    "Spike Factory 1-0-5",
+    "Village 1 2-0-2"
+   ]
+  },
+  {
+   "round": 94,
+   "steps": [
+    "Glue 5-2-0"
+   ]
+  },
+  {
+   "round": 95,
+   "steps": [
+    "Alchemist 2 4-2-0"
+   ]
+  }
+ ],
+ "tricky_tracks_easy.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Quincy"
+   ]
+  },
+  {
+   "round": 0,
+   "steps": [
+    "right Sniper 1-0-2",
+    "left Sniper 0-2-4",
+    "right Sniper 1-0-4"
+   ]
+  }
+ ],
+ "workshop_easy.py": [
+  {
+   "round": -1,
+   "steps": [
+    "Glue",
+    "Glue target Last",
+    "Sauda"
+   ]
+  },
+  {
+   "round": 0,
+   "steps": [
+    "Glue 3-2-0",
+    "Boomerang 0-3-2",
+    "Bomb 2-4-0"
+   ]
+  }
+ ]
+}

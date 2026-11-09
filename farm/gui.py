@@ -694,6 +694,7 @@ class App:
             y = LY + 94 + i * pitch
             self.static(plate(LW - 44, rh + 2, fill="#16408c"), LX + 22, y - 1)
             self.row_names[name] = Sprite(cv, LX + 34, y + rh // 2, anchor="w")
+            cv.tag_bind(self.row_names[name].id, "<ButtonRelease-1>", lambda e, n=name: self.open_strat(n))
             for j, (mode, label) in enumerate(COLS):
                 key = next((k for k, v in ENTRIES.items() if v == (name, mode)), None)
                 if key:
@@ -716,6 +717,10 @@ class App:
         self.now_status = Sprite(cv, RX + 42, RY + 186)
         self.now_next = Sprite(cv, RX + 42, RY + 210)
         self.now_reload = Sprite(cv, RX + RW - 40, RY + 140, anchor="ne")     # next BTD6 reload, local time
+        # the build order of what's playing (or picked); a map's name on the left opens its own
+        self.strat_btn = Button(self, RX + RW - 22 - 16 - 110, RY + 128 + 116 - 14 - 36, 110, 36, self.open_strat, size=15, r=14)
+        self.strat_btn.set("STRAT", BLUE)
+        self.strat_win = None
 
         cy = RY + 262
         self.start_btn = Button(self, RX + 22, cy, 330, 76, self.on_start, size=38)
@@ -917,6 +922,75 @@ class App:
                     n[2] = over
         finally:
             self.root.after(125, self.poll_notes)
+
+    def open_strat(self, map_name=None):
+        """A map's build order, one tab per farm script (strats.json, made by strats.py)."""
+        if map_name is None:                # the STRAT button: what's playing, else what's picked
+            key = (self.current_script() if self.running() else None) or self.prefs.get("map")
+            map_name = ENTRIES.get(key, (ROWS[0],))[0]
+        if self.strat_win is not None and self.strat_win.winfo_exists():
+            self.strat_win.destroy()
+        strats = read_json(os.path.join(HERE, "strats.json"), {})
+        short = dict(COLS)
+        tabs = {}                           # script -> its modes
+        for key, (m, mode) in ENTRIES.items():
+            if m == map_name:
+                tabs.setdefault(key.split("@")[0], []).append(mode)
+        order = [md for md, _ in COLS]
+        scripts = sorted(tabs, key=lambda s: min(order.index(md) for md in tabs[s]))
+        w, h = 520, 600
+        win = self.strat_win = tk.Toplevel(self.root)
+        win.title(f"{map_name} strat")
+        win.resizable(False, False)
+        win.configure(bg="#17449e")
+        win.transient(self.root)
+        win.geometry(f"{w}x{h}+{self.root.winfo_rootx() + (W - w) // 2}+{self.root.winfo_rooty() + (H - h) // 2}")
+        cv = tk.Canvas(win, width=w, height=h, highlightthickness=0, bd=0, bg="#17449e")
+        cv.pack()
+        bg = gradient(w, h, ("#1f63cc", "#17449e", "#0c2766"))
+        t = text_img(map_name.upper(), 30, grad=("#ffe98a", "#ffc93a", "#ffa21a"), stroke="#7a4300", sw=2, max_w=w - 40)
+        bg.alpha_composite(t, ((w - t.width) // 2, 16))
+        win.bg_photo = ImageTk.PhotoImage(bg)
+        cv.create_image(0, 0, image=win.bg_photo, anchor="nw")
+        box = tk.Text(win, bg="#0f2c66", fg=CREAM, bd=0, highlightthickness=0, font=("Segoe UI", 12),
+                      wrap="word", relief="flat", cursor="arrow", padx=14, pady=10, spacing1=2, spacing3=2)
+        box.tag_configure("r", foreground=GOLD, font=("Segoe UI Semibold", 12), spacing1=10)
+        box.tag_configure("n", foreground="#7f9bd0")
+        top = 74 + (52 if len(scripts) > 1 else 0)
+        cv.create_window(22, top, window=box, anchor="nw", width=w - 44, height=h - top - 22)
+        shim = type("Shim", (), {"cv": cv})()
+        btns = {}
+
+        def show(script):
+            for s, b in btns.items():
+                b.set(style=YELLOW if s == script else BLUE)
+            box.configure(state="normal")
+            box.delete("1.0", "end")
+            rows = strats.get(script)
+            if not rows:
+                box.insert("end", "No strat written down for this one yet.")
+            n = 0
+            for r in rows or []:
+                steps = [s for s in r["steps"] if s]
+                if not steps:
+                    continue
+                rnd = r["round"]
+                head = "Before round 1" if rnd < 0 else "From the start" if rnd == 0 else f"Round {rnd}"
+                box.insert("end", head + "\n", "r")
+                for s in steps:
+                    n += 1
+                    box.insert("end", f"{n:>2}  ", "n")
+                    box.insert("end", s[:1].upper() + s[1:] + "\n")
+            box.configure(state="disabled")
+
+        if len(scripts) > 1:
+            bw = (w - 44 - 10 * (len(scripts) - 1)) // len(scripts)
+            for i, s in enumerate(scripts):
+                b = btns[s] = Button(shim, 22 + i * (bw + 10), 72, bw, 40, lambda s=s: show(s), size=15, r=14)
+                b.set(" · ".join(short[md] for md in sorted(tabs[s], key=order.index)), BLUE)
+        cur = (self.current_script() or "").split("@")[0] if self.running() else ""
+        pick = (self.prefs.get("map") or "").split("@")[0]
+        show(cur if cur in tabs else pick if pick in tabs else scripts[0])
 
     def open_got(self):
         """Every insta won from a candy box, counted by tower and tiers. CLEAR empties the list."""
