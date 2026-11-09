@@ -1502,7 +1502,8 @@ class App:
         n = f"NEXT: {nxt}" if nxt else ""
         self.now_next.show(n, lambda: text_img(n, 20, fill=GOLD, max_w=530) if n
                            else Image.new("RGBA", (1, 1)))
-        t0 = game_started() if on and self.prefs.get("reload", True) else None
+        # shown stopped too (the game's age keeps counting; the farm reloads at its next home screen)
+        t0 = game_started() if self.prefs.get("reload", True) else None
         if t0 is None:
             r = ""
         elif time.time() >= t0 + RELOAD_AFTER:
