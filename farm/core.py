@@ -754,24 +754,81 @@ def open_boxes(im):
 FEATURED = [(1435, 410), (1560, 410), (1435, 520), (1560, 520)]   # the 4 featured instas
 
 
-def pick_banana_farm(im):
-    """User: on a full candy box, if a Banana Farm is among the featured instas, click it
-    before opening. Its icon is mostly bright palm-leaf green (measured 26% on the user's
-    picture of it). Every featured row is saved to featured/ so the
-    test can be checked against what was really there."""
+FEATURED_BOX = (1355, 320, 1640, 640)      # the 4 tiles, as saved to featured/
+INSTA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "instas")   # one picture per monkey
+
+
+def featured_box(im):
+    """The featured tiles, scaled to 1920x1080 pixels (285x320)."""
+    (x0, y0), (x1, y1) = scr(*FEATURED_BOX[:2]), scr(*FEATURED_BOX[2:])
+    return im.convert("RGB").crop((x0 - OX, y0 - OY, x1 - OX, y1 - OY)).resize((285, 320))
+
+
+def which_insta(box, i):
+    """The instas/ picture tile i shows ('02'), or None. Matched with a small shift search: the
+    tiles pulse and the panel can slide in. A best match well ahead of the next one is required."""
+    from PIL import ImageChops, ImageStat
+    if not hasattr(which_insta, "refs"):
+        # each picture at a few sizes too: the tiles grow and shrink (hover, the box's pulse)
+        which_insta.refs = {}
+        for f in sorted(os.listdir(INSTA_DIR)):
+            if f.endswith(".png"):
+                im = Image.open(os.path.join(INSTA_DIR, f)).convert("RGB")
+                sizes = []
+                for s in (0.84, 0.92, 1.0, 1.08):
+                    n = round(64 * s)
+                    sizes.append(im.resize((n, n), Image.BILINEAR).crop((n // 2 - 22, n // 2 - 22, n // 2 + 22, n // 2 + 22)))
+                which_insta.refs[f[:-4]] = sizes
+    cx, cy = (80, 205, 80, 205)[i], (90, 90, 200, 200)[i]
+    px = list(box.crop((cx - 32, cy - 32, cx + 32, cy + 32)).getdata())
+    if sum(b > 100 and r < 60 and b > g + 20 for r, g, b in px) < 0.08 * len(px):     # tile blue ~ (10, 90, 140)
+        return None         # no blue tile there (the panel isn't up): the purple backdrop matched Spikes
+    tiles = [box.crop((cx - 22 + dx, cy - 22 + dy, cx + 22 + dx, cy + 22 + dy))
+             for dy in range(-8, 9, 2) for dx in range(-8, 9, 2)]
+    ds = []
+    for name, sizes in which_insta.refs.items():
+        d = min(sum(ImageStat.Stat(ImageChops.difference(t, r)).mean) / 3 for t in tiles for r in sizes)
+        ds.append((d, name))
+    ds.sort()
+    # measured on 468 saved tiles: right answers came in under 50 and under 0.9 of the runner-up
+    return ds[0][1] if ds[0][0] < 50 and ds[0][0] < 0.9 * ds[1][0] else None
+
+
+def insta_picks():
+    """The user's featured instas, in order (the app's INSTAS picker, gui.json). Empty: pick none."""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.json"), encoding="utf-8") as f:
+            return [str(p) for p in json.load(f).get("instas", [])]
+    except (OSError, ValueError):
+        return []
+
+
+def pick_featured(im):
+    """On a full candy box, click the first of the user's picked instas that's featured (each
+    user picks their own in the app). Every featured row is saved to featured/."""
+    picks = insta_picks()
     folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "featured")
     os.makedirs(folder, exist_ok=True)
     stamp = time.strftime("%Y%m%d_%H%M%S")
-    im.crop((1355, 320, 1640, 640)).save(os.path.join(folder, f"{stamp}.png"))
-    for x, y in FEATURED:
-        sx, sy = scr(x, y)
-        sx, sy = sx - OX, sy - OY
-        px = list(im.convert("RGB").crop((sx - 38, sy - 38, sx + 38, sy + 38)).getdata())
-        # palm leaves: about a quarter of the Banana Farm art is bright leaf green (its bananas
-        # are tiny); the other featured icons seen so far measured 0
-        leaf = sum(g > 140 and g > r + 40 and g > b + 60 for r, g, b in px) / len(px)
-        if leaf > 0.12:
-            print(f"featured insta at {(x, y)} looks like a Banana Farm: picking it")
+    # the panel slides in and its tiles pulse: wait until two looks agree
+    from PIL import ImageChops, ImageStat
+    box = featured_box(im)
+    for _ in range(6):
+        time.sleep(0.3)
+        nxt = featured_box(grab())
+        moved = sum(ImageStat.Stat(ImageChops.difference(box, nxt)).mean) / 3
+        box = nxt
+        if moved < 6:
+            break
+    box.save(os.path.join(folder, f"{stamp}.png"))
+    if not picks:
+        return False
+    seen = [which_insta(box, i) for i in range(4)]
+    print("featured instas: " + ", ".join(s or "?" for s in seen))
+    for p in picks:
+        if p in seen:
+            x, y = FEATURED[seen.index(p)]
+            print(f"featured insta {p}: picking it")
             click(x, y)
             wait(1.5)
             grab().save(os.path.join(folder, f"{stamp}_picked.png"))
@@ -1419,7 +1476,7 @@ def farm():
         elif matches(im, EVENT):
             px = im.getpixel((round(COLLECT_BTN[0] * W / 1920), round(COLLECT_BTN[1] * H / 1080)))
             if px[1] > 180 and px[0] < 150 and px[2] < 100:     # green Collect button
-                pick_banana_farm(im)
+                pick_featured(im)
                 print("collecting candy box")
                 click(*COLLECT_BTN)
                 wait_for(INSTA_CARDS, 3)

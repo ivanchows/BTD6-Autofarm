@@ -699,13 +699,17 @@ class App:
         self.start_btn = Button(self, RX + 22, cy, 330, 76, self.on_start, size=38)
         self.pause_btn = Button(self, RX + 368, cy, RW - 390, 76, self.on_pause, size=28)
         # the toggles, all in one row
-        tw = (RW - 44 - 2 * 12) // 3
+        tw = (RW - 44 - 3 * 12) // 4
         ty = cy + 92
         self.afk_btn = Button(self, RX + 22, ty, tw, 42, self.on_afk, size=17, r=16)
         # the farm checks BTD6's Auto Start switch once per launch; off = never opens that menu
         self.autostart_btn = Button(self, RX + 22 + tw + 12, ty, tw, 42, self.on_autostart, size=17, r=16)
         # reload BTD6 every 2 h (core.RELOAD_AFTER)
         self.reload_btn = Button(self, RX + 22 + 2 * (tw + 12), ty, tw, 42, self.on_reload, size=17, r=16)
+        # which featured instas to pick on a full candy box (each user's own, in gui.json)
+        self.insta_btn = Button(self, RX + 22 + 3 * (tw + 12), ty, tw, 42, self.open_instas, size=17, r=16)
+        self.insta_btn.set("INSTAS", BLUE)
+        self.insta_win = None
         self.hover_note(self.afk_btn, "Tabs back into the game")
         self.hover_note(self.reload_btn, "Steam only")       # it reopens BTD6 through Steam
 
@@ -877,6 +881,7 @@ class App:
             self.notes = []
             self.root.after(125, self.poll_notes)
         self.notes.append([btn, note.id, False])
+        self.keep.append(note)      # its picture dies with the Sprite: "image pyimage67 doesn't exist" (gui.log)
 
     def poll_notes(self):
         try:
@@ -890,6 +895,58 @@ class App:
                     n[2] = over
         finally:
             self.root.after(125, self.poll_notes)
+
+    def open_instas(self):
+        """The featured insta picker: click monkeys in the order to pick them; click again to drop.
+        The farm reads prefs['instas'] from gui.json at each full candy box."""
+        if self.insta_win is not None and self.insta_win.winfo_exists():
+            self.insta_win.lift()
+            return
+        folder = os.path.join(HERE, "instas")
+        names = sorted(f[:-4] for f in os.listdir(folder) if f.endswith(".png"))
+        cols, s, gap = 7, 72, 8
+        rows = (len(names) + cols - 1) // cols
+        w, h = cols * (s + gap) + gap, rows * (s + gap) + gap
+        win = self.insta_win = tk.Toplevel(self.root)
+        win.title("Featured Instas")
+        win.resizable(False, False)
+        win.configure(bg="#163f95")
+        win.transient(self.root)
+        win.geometry(f"+{self.root.winfo_rootx() + (W - w) // 2}+{self.root.winfo_rooty() + (H - h) // 2}")
+        cv = tk.Canvas(win, width=w, height=h, highlightthickness=0, bd=0, bg="#163f95")
+        cv.pack()
+        # inset, so a picked one's yellow shows all round (and the tile's count digit is cut off)
+        icons = {n: Image.open(os.path.join(folder, n + ".png")).convert("RGBA").crop((8, 8, 56, 56)).resize((s - 20, s - 20))
+                 for n in names}
+        sprites = {}
+
+        def tile(n):
+            picks = self.prefs.get("instas", [])
+            st = YELLOW if n in picks else TILE
+            b = btd_button(s, s, st, r=12, rim=2)
+            b.alpha_composite(icons[n], (10 + Button.PAD, 10 + Button.PAD))
+            if n in picks:
+                t = text_img(str(picks.index(n) + 1), 22)
+                b.alpha_composite(t, (b.width - t.width - 2, 0))
+            return b
+
+        def paint():
+            for n, sp in sprites.items():
+                picks = self.prefs.get("instas", [])
+                sp.show((n in picks, picks.index(n) if n in picks else -1), lambda n=n: tile(n))
+
+        def toggle(n):
+            picks = list(self.prefs.get("instas", []))
+            picks.remove(n) if n in picks else picks.append(n)
+            self.prefs["instas"] = picks
+            self.save_prefs()
+            paint()
+
+        for k, n in enumerate(names):
+            x, y = gap + (k % cols) * (s + gap), gap + (k // cols) * (s + gap)
+            sp = sprites[n] = Sprite(cv, x - Button.PAD, y - Button.PAD)
+            cv.tag_bind(sp.id, "<ButtonRelease-1>", lambda e, n=n: toggle(n))
+        paint()
 
     def on_reload(self):
         self.prefs["reload"] = not self.prefs.get("reload", True)
