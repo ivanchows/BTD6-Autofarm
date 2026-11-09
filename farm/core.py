@@ -746,9 +746,55 @@ def open_boxes(im):
         return
     for x in find_cards(im):
         click(x, 540)
-        wait_for(INSTA_REVEAL, 2.5)     # Esc as soon as the card shows, not after a fixed wait
+        if wait_for(INSTA_REVEAL, 2.5):     # Esc as soon as the card shows, not after a fixed wait
+            try:
+                time.sleep(0.4)             # let the card finish growing in
+                read_insta(grab())
+            except Exception as e:
+                print(f"insta reader: {e}")
         key("\x1b")
         wait_for(INSTA_CARDS, 1.5)
+
+
+TOWERS = ["Dart Monkey", "Boomerang Monkey", "Bomb Shooter", "Tack Shooter", "Ice Monkey", "Glue Gunner",
+          "Desperado", "Sniper Monkey", "Monkey Sub", "Monkey Buccaneer", "Monkey Ace", "Heli Pilot",
+          "Mortar Monkey", "Dartling Gunner", "Wizard Monkey", "Super Monkey", "Ninja Monkey", "Alchemist",
+          "Druid", "Mermonkey", "Banana Farm", "Spike Factory", "Monkey Village", "Engineer Monkey",
+          "Beast Handler"]
+GOT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "instas_got.json")
+
+
+def read_insta(im):
+    """The insta on the reveal screen ('Ninja Monkey', '0-3-3') -> instas_got.json, for the app's
+    list. The picture is kept in featured/got_*.png so a misread can be checked."""
+    import difflib
+    full = im.convert("RGB").resize((1920, 1080))
+    flat = re.sub(r"\s+", " ", _ocr(full))
+    m = re.search(r"([0-5])\s*[-–—]\s*([0-5])\s*[-–—]\s*([0-5])", flat)
+    tiers = "-".join(m.groups()) if m else None
+    # the name: white title letters under the picture (the game's font reads 'ALcuemrsT' whole-screen),
+    # so OCR that line alone as black on white, then take the closest tower name
+    line = full.crop((560, 770, 1360, 835)).convert("L").point(lambda v: 0 if v > 200 else 255)
+    name = re.sub(r"[^a-z]", "", _ocr(line.resize((line.width * 2, line.height * 2))).lower())
+    keys = {t.lower().replace(" ", ""): t for t in TOWERS}
+    keys.update({t.lower().replace(" monkey", "").replace(" ", ""): t for t in TOWERS})
+    hit = difflib.get_close_matches(name, keys, n=1, cutoff=0.6) if name else []
+    tower = keys[hit[0]] if hit else None
+    flat = f"{flat} | name line: {name}"
+    folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "featured")
+    os.makedirs(folder, exist_ok=True)
+    im.save(os.path.join(folder, time.strftime("got_%Y%m%d_%H%M%S.png")))
+    print(f"insta: {tiers or '?'} {tower or '?'}" + ("" if tower and tiers else f"  (read: {flat[:80]})"))
+    try:
+        with open(GOT_FILE, encoding="utf-8") as f:
+            got = json.load(f)
+    except (OSError, ValueError):
+        got = []
+    got.append({"at": time.strftime("%Y-%m-%d %H:%M"), "tower": tower or "?", "tiers": tiers or "?"})
+    tmp = GOT_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(got, f)
+    os.replace(tmp, GOT_FILE)
 
 
 FEATURED = [(1435, 410), (1560, 410), (1435, 520), (1560, 520)]   # the 4 featured instas
@@ -777,17 +823,24 @@ def which_insta(box, i):
                 sizes = []
                 for s in (0.84, 0.92, 1.0, 1.08):
                     n = round(64 * s)
-                    sizes.append(im.resize((n, n), Image.BILINEAR).crop((n // 2 - 22, n // 2 - 22, n // 2 + 22, n // 2 + 22)))
+                    r = im.resize((n, n), Image.BILINEAR).crop((n // 2 - 22, n // 2 - 22, n // 2 + 22, n // 2 + 22))
+                    sizes.append(r)
+                    # the insta picked last box is drawn faded: 41% pale blue over it (measured 2026-11-09)
+                    sizes.append(Image.blend(r, Image.new("RGB", r.size, (190, 243, 255)), 0.41))
                 which_insta.refs[f[:-4]] = sizes
     cx, cy = (80, 205, 80, 205)[i], (90, 90, 200, 200)[i]
     px = list(box.crop((cx - 32, cy - 32, cx + 32, cy + 32)).getdata())
-    if sum(b > 100 and r < 60 and b > g + 20 for r, g, b in px) < 0.08 * len(px):     # tile blue ~ (10, 90, 140)
+    # tile blue ~ (10, 90, 140), faded ~ (85, 150, 190); the purple backdrop has less green than red
+    if sum(b > r + 40 and g > r + 20 for r, g, b in px) < 0.08 * len(px):
         return None         # no blue tile there (the panel isn't up): the purple backdrop matched Spikes
     tiles = [box.crop((cx - 22 + dx, cy - 22 + dy, cx + 22 + dx, cy + 22 + dy))
              for dy in range(-8, 9, 2) for dx in range(-8, 9, 2)]
+    # faded (picked last box) only if the tile's own background is pale: a faded Bomb matched dim Mortars
+    corners = [box.getpixel((cx + sx, cy + sy)) for sx in (-27, 27) for sy in (-27, 27)]
+    pale = sum(r > 50 and b > 150 for r, g, b in corners) >= 3
     ds = []
     for name, sizes in which_insta.refs.items():
-        d = min(sum(ImageStat.Stat(ImageChops.difference(t, r)).mean) / 3 for t in tiles for r in sizes)
+        d = min(sum(ImageStat.Stat(ImageChops.difference(t, r)).mean) / 3 for t in tiles for r in sizes[pale::2])
         ds.append((d, name))
     ds.sort()
     # measured on 468 saved tiles: right answers came in under 50 and under 0.9 of the runner-up

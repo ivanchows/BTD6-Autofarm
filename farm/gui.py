@@ -656,6 +656,10 @@ class App:
         self.static(t2, 22 + t.width, 14)
         self.game_btn = Button(self, 22 + t.width + t2.width + 22, 26, 168, 42, self.open_game, size=17, r=21)
         self.waiting_since = None       # Start pressed with the game closed: when it was opened
+        # the instas won from candy boxes (core.read_insta -> instas_got.json)
+        self.got_btn = Button(self, self.game_btn.x + 168 + 16, 26, 168, 42, self.open_got, size=17, r=21)
+        self.got_btn.set("MY INSTAS", BLUE)
+        self.got_win = None
         self.update_btn = Button(self, W - 216, 20, 196, 52, self.do_update, size=22)
         self.update_btn.set("CHECK UPDATE", BLUE)
 
@@ -895,6 +899,72 @@ class App:
                     n[2] = over
         finally:
             self.root.after(125, self.poll_notes)
+
+    def open_got(self):
+        """Every insta won from a candy box, counted by tower and tiers. CLEAR empties the list."""
+        if self.got_win is not None and self.got_win.winfo_exists():
+            self.got_win.lift()
+            return
+        path = os.path.join(HERE, "instas_got.json")
+        w, h = 420, 520
+        win = self.got_win = tk.Toplevel(self.root)
+        win.title("My Instas")
+        win.resizable(False, False)
+        win.configure(bg="#163f95")
+        win.transient(self.root)
+        win.geometry(f"{w}x{h}+{self.root.winfo_rootx() + (W - w) // 2}+{self.root.winfo_rooty() + (H - h) // 2}")
+        cv = tk.Canvas(win, width=w, height=h, highlightthickness=0, bd=0, bg="#163f95")
+        cv.pack()
+        title = Sprite(cv, 22, 16)
+        box = tk.Text(win, bg="#0f2c66", fg=CREAM, bd=0, highlightthickness=0, font=("Consolas", 12),
+                      wrap="none", relief="flat", cursor="arrow", padx=10, pady=8)
+        box.tag_configure("n", foreground=GOLD)
+        cv.create_window(22, 64, window=box, anchor="nw", width=w - 44, height=h - 64 - 78)
+        shim = type("Shim", (), {"cv": cv})()
+        clear = Button(shim, 22, h - 64, w - 44, 46, lambda: wipe(), size=20)
+        clear.set("CLEAR LIST", RED)
+        seen = {"m": None}
+
+        def load():
+            try:
+                with open(path, encoding="utf-8") as f:
+                    return json.load(f)
+            except (OSError, ValueError):
+                return []
+
+        def paint():
+            got = load()
+            title.show(len(got), lambda: text_img(f"{len(got)} INSTAS", 26))
+            counts = {}
+            for g in got:
+                k = (g.get("tower", "?"), g.get("tiers", "?"))
+                counts[k] = counts.get(k, 0) + 1
+            box.configure(state="normal")
+            box.delete("1.0", "end")
+            for (tower, tiers), n in sorted(counts.items()):
+                box.insert("end", f"{tiers:<6} {tower:<18}")
+                box.insert("end", f"x{n}\n", "n")
+            box.configure(state="disabled")
+
+        def wipe():
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+            paint()
+
+        def tick():         # new instas show up while it's open
+            if not win.winfo_exists():
+                return
+            try:
+                m = os.path.getmtime(path)
+            except OSError:
+                m = 0
+            if m != seen["m"]:
+                seen["m"] = m
+                paint()
+            win.after(2000, tick)
+        tick()
 
     def open_instas(self):
         """The featured insta picker: click monkeys in the order to pick them; click again to drop.
