@@ -974,31 +974,70 @@ class App:
             return
         folder = os.path.join(HERE, "instas")
         names = sorted(f[:-4] for f in os.listdir(folder) if f.endswith(".png"))
-        cols, s, gap = 7, 72, 8
+        cols, s, gap, top, side = 7, 84, 14, 78, 26
         rows = (len(names) + cols - 1) // cols
-        w, h = cols * (s + gap) + gap, rows * (s + gap) + gap
+        w, h = 2 * side + cols * s + (cols - 1) * gap, top + rows * s + (rows - 1) * gap + side
         win = self.insta_win = tk.Toplevel(self.root)
         win.title("Featured Instas")
         win.resizable(False, False)
-        win.configure(bg="#163f95")
+        win.configure(bg="#17449e")
         win.transient(self.root)
         win.geometry(f"+{self.root.winfo_rootx() + (W - w) // 2}+{self.root.winfo_rooty() + (H - h) // 2}")
-        cv = tk.Canvas(win, width=w, height=h, highlightthickness=0, bd=0, bg="#163f95")
+        cv = tk.Canvas(win, width=w, height=h, highlightthickness=0, bd=0, bg="#17449e")
         cv.pack()
-        # inset, so a picked one's yellow shows all round (and the tile's count digit is cut off)
-        icons = {n: Image.open(os.path.join(folder, n + ".png")).convert("RGBA").crop((8, 8, 56, 56)).resize((s - 20, s - 20))
-                 for n in names}
+        bg = gradient(w, h, ("#1f63cc", "#17449e", "#0c2766"))
+        t = text_img("FEATURED INSTAS", 30, grad=("#ffe98a", "#ffc93a", "#ffa21a"), stroke="#7a4300", sw=2)
+        bg.alpha_composite(t, ((w - t.width) // 2, 18))
+        self.insta_bg = ImageTk.PhotoImage(bg)
+        cv.create_image(0, 0, image=self.insta_bg, anchor="nw")
+
+        # the game's own tile art at 1:1 (it's 64 px, so no scaling: scaling is what blurred it),
+        # rounded so the tile's edge and count digit don't show
+        n_ic = 60
+        mask = Image.new("L", (n_ic * SS, n_ic * SS), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, n_ic * SS - 1, n_ic * SS - 1), 11 * SS, fill=255)
+        mask = mask.resize((n_ic, n_ic), Image.LANCZOS)
+        icons = {}
+        for n in names:
+            ic = Image.open(os.path.join(folder, n + ".png")).convert("RGBA").crop((2, 2, 2 + n_ic, 2 + n_ic))
+            # the tile's count number pokes in at the top right: paint its white and black over with tile blue
+            px = ic.load()
+            for y in range(14):
+                for x in range(n_ic - 16, n_ic):
+                    r, g, b_, _ = px[x, y]
+                    if (r > 200 and g > 200 and b_ > 200) or (r < 45 and g < 45 and b_ < 60):
+                        px[x, y] = (14, 78, 140, 255)
+            ic.putalpha(mask)
+            icons[n] = ic
         sprites = {}
+
+        def badge(num):
+            k = SS
+            d = 30 * k
+            im = Image.new("RGBA", (d, d), (0, 0, 0, 0))
+            dr = ImageDraw.Draw(im)
+            dr.ellipse((0, 0, d - 1, d - 1), fill="#7a1418")
+            dr.ellipse((2 * k, 2 * k, d - 1 - 2 * k, d - 1 - 2 * k), fill="#e8343a")
+            im = down(im)
+            t = text_img(str(num), 17)
+            im.alpha_composite(t, ((im.width - t.width) // 2, (im.height - t.height) // 2))
+            return im
 
         def tile(n):
             picks = self.prefs.get("instas", [])
-            st = YELLOW if n in picks else TILE
-            b = btd_button(s, s, st, r=12, rim=2)
-            b.alpha_composite(icons[n], (10 + Button.PAD, 10 + Button.PAD))
-            if n in picks:
-                t = text_img(str(picks.index(n) + 1), 22)
-                b.alpha_composite(t, (b.width - t.width - 2, 0))
-            return b
+            on = n in picks
+            b = btd_button(s, s, YELLOW if on else TILE, r=16, rim=2)
+            pad = (b.width - s) // 2
+            well = Image.new("RGBA", (n_ic + 4, n_ic + 4), (0, 0, 0, 0))
+            well.putalpha(mask.resize((n_ic + 4, n_ic + 4)).point(lambda v: v * 150 // 255))
+            b.alpha_composite(well, (pad + (s - n_ic - 4) // 2, pad + (s - n_ic - 4) // 2 + 1))
+            b.alpha_composite(icons[n], (pad + (s - n_ic) // 2, pad + (s - n_ic) // 2))
+            out = Image.new("RGBA", (b.width + 12, b.height + 12), (0, 0, 0, 0))
+            out.alpha_composite(b, (0, 12))
+            if on:
+                bd = badge(picks.index(n) + 1)
+                out.alpha_composite(bd, (out.width - bd.width, 0))
+            return out
 
         def paint():
             for n, sp in sprites.items():
@@ -1013,8 +1052,8 @@ class App:
             paint()
 
         for k, n in enumerate(names):
-            x, y = gap + (k % cols) * (s + gap), gap + (k // cols) * (s + gap)
-            sp = sprites[n] = Sprite(cv, x - Button.PAD, y - Button.PAD)
+            x, y = side + (k % cols) * (s + gap), top + (k // cols) * (s + gap)
+            sp = sprites[n] = Sprite(cv, x - Button.PAD, y - Button.PAD - 12)
             cv.tag_bind(sp.id, "<ButtonRelease-1>", lambda e, n=n: toggle(n))
         paint()
 
