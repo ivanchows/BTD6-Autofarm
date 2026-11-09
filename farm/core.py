@@ -205,7 +205,7 @@ def game_age():
 
 
 def reload_if_old():
-    """Between games only (a game just ended): after RELOAD_AFTER, restart BTD6 through Steam.
+    """Between games only, on the home screen: after RELOAD_AFTER, restart BTD6 through Steam.
     True if it did. The farm then comes back through the start and home screens as after a crash."""
     if os.environ.get("BTD6_NO_RELOAD"):       # the app's RELOAD OFF
         return False
@@ -1469,9 +1469,6 @@ def farm():
                     sys.stdout.flush()
                     os._exit(6)         # a stand-in map's game is done: check the bonus map again
             STATS["progress"] = time.time()
-            if reload_if_old():
-                running = False
-                continue
             STATS["status"] = "won, heading home"
             click(*NEXT_BTN)
             wait(0.8)
@@ -1487,9 +1484,6 @@ def farm():
                 STATS["losses"] += 1
                 STATS["lost_this_game"] = True
             STATS["progress"] = time.time()
-            if reload_if_old():
-                running = False
-                continue
             STATS["status"] = "lost, restarting"
             click(*RESTART_PAID_BTN)
             wait(0.6)
@@ -1500,9 +1494,6 @@ def farm():
                 STATS["losses"] += 1
                 STATS["lost_this_game"] = True
             STATS["progress"] = time.time()
-            if reload_if_old():
-                running = False
-                continue
             STATS["status"] = "lost, restarting"
             click(*RESTART_BTN)
             wait(0.6)
@@ -1537,6 +1528,12 @@ def farm():
                 click(*EVENT_BACK_BTN)
                 wait(4)
         elif matches(im, HOME):
+            # BTD6's 2-hourly reload goes here, off the home screen: closing the game on the victory
+            # screen left the won game saved at round 41 ("Continue saved game?", Flooded Valley
+            # and Workshop, 2026-11-09)
+            if reload_if_old():
+                running = False
+                continue
             print("home -> back into the map")
             STATS["status"] = "reading stats"
             read_home(im)
