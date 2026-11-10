@@ -564,12 +564,11 @@ def try_op(op):
         if result == "placed":
             done = True
             TMODE[repr(pos)] = 0        # a new tower: on its cycle's first targeting mode
-        elif result == "nocash" and key == HERO_KEY and (has_tower(pos) or (read_cash() or 0) >= 2500):
+        elif result == "nocash" and key == HERO_KEY and (hero_out() or has_tower(pos)):
             done = True         # a hero places once: with it standing, its key shows no ghost.
-            print("already standing:", label)   # The panel check can miss a hero after a restart
-                                                # (every map's hero goes through here, key "u"):
-                                                # no ghost with $2,500 in hand (above any hero's
-                                                # price) means it's out
+            print("already standing:", label)   # The panel check misses a hero after a restart or
+                                                # one the player placed by hand somewhere else
+                                                # (every map's hero goes through here, key "u")
         elif result == "blocked":
             FAILS[label] = FAILS.get(label, 0) + 1
             if isinstance(pos, Spot) and FAILS[label] >= len(pos.cands) and key != SNIPER_KEY                     and has_tower(pos):
@@ -582,6 +581,14 @@ def try_op(op):
                 done = True     # refused 3 times at a fixed spot with cash in hand: the tower
                 print("already standing:", label)      # is already there (a restart)
     return done
+
+
+def hero_out():
+    """No ghost on the hero key with more than the hero's price in hand, 3 reads running (one
+    cash misread can't skip a hero still unaffordable): it's already out (user, 2026-11-09)."""
+    cash = read_cash()
+    G["hero_rich"] = G.get("hero_rich", 0) + 1 if cash and cash >= F.hero_cash() else 0
+    return G["hero_rich"] >= 3
 
 
 def read_round(im):
@@ -608,7 +615,7 @@ def read_round(im):
 
 
 def setup():
-    G.update(round=0, done={0}, during=set(), pending=None, fresh=True, queue=list(STEPS[0]))
+    G.update(round=0, done={0}, during=set(), pending=None, fresh=True, queue=list(STEPS[0]), hero_rich=0)
     FAILS.clear()
     SEL["pos"] = None
     SNIPER_3.i = SKY2.i = BOOM.i = 0

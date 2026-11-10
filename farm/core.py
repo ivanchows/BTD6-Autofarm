@@ -957,6 +957,21 @@ HERO = None             # a map with a hero sets its name: F.HERO = "Etienne"
 HERO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hero.txt")
 
 
+# Heroes' Medium prices. A hero placed by hand before the farm started shows no ghost on its key,
+# same as one it can't afford yet: cash past this (x1.15 margin, by difficulty) tells them apart.
+HERO_PRICE = {"Quincy": 540, "Gwendolin": 725, "Striker Jones": 750, "Obyn": 650, "Captain Churchill": 2000,
+              "Benjamin": 1200, "Ezili": 600, "Pat Fusty": 800, "Adora": 1000, "Admiral Brickell": 900,
+              "Etienne": 850, "Sauda": 600, "Psi": 800, "Geraldo": 750, "Silas": 770}
+
+
+def hero_cash():
+    """Cash at which a hero key with no ghost means the hero is already out."""
+    base = HERO_PRICE.get(HERO)
+    if not base:
+        return 2500
+    return min(2500, int(base * DIFFICULTY_MULT.get(DIFF, 1.2) * 1.15))
+
+
 def hero_now():
     try:
         return open(HERO_FILE, encoding="utf-8").read().strip() or None
